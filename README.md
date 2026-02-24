@@ -1,2 +1,9 @@
-# athena
-Autonomous multi‑agent market &amp; competitive intelligence platform built for the Complete AI Hackathon. ATHENA orchestrates Complete.dev agents and custom FastAPI services to generate strategic insights, reports, and pitch decks.
+# ATHENA
+
+Autonomous multi-agent market & competitive intelligence platform for the Complete AI Hackathon.
+
+Built with:
+- Complete.dev agents (Scout, Strategy)
+- FastAPI orchestrator (backend)
+- Future: FalkorDB + PostgreSQL for knowledge graph and structured data
+
