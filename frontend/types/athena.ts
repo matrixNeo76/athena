@@ -48,18 +48,28 @@ export interface DeckSlide {
 }
 
 export interface PresenterResult {
+  job_id: string;
+  target: string;
   report_markdown: string;
   deck_outline: DeckSlide[];
   report_path?: string;
-  generated_at: string;
+  report_url?: string;
+  presented_at?: string;   // FIX: was generated_at — matches backend PresenterResult.presented_at
 }
 
 export interface ResultsResponse {
   job_id: string;
+  target: string;
+  stage: PipelineStage;
   status: string;
+  message: string;
   presenter_result: PresenterResult | null;
-  analyst_result: Record<string, unknown> | null;
-  strategy_result: Record<string, unknown> | null;
+  swot?: Record<string, unknown> | null;
+  gtm?: Record<string, unknown> | null;
+  competitors?: string[] | null;
+  key_trends?: string[] | null;
+  report_url?: string | null;
+  completed_at?: string | null;
 }
 
 // ---- WebSocket progress message --------------------------------------------
