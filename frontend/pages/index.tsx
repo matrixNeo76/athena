@@ -102,7 +102,8 @@ const SlideCard: React.FC<{ slide: DeckSlide }> = ({ slide }) => (
     {slide.bullets && slide.bullets.length > 0 && (
       <ul className="slide-bullets">
         {slide.bullets.map((b, idx) => (
-          <li key={idx}>{b}</li>
+          // Composite key prevents warning when multiple SlideCards are rendered
+          <li key={`s${slide.slide_number}-b${idx}`}>{b}</li>
         ))}
       </ul>
     )}
@@ -136,7 +137,7 @@ export default function Home() {
   const wsRef          = useRef<WebSocket | null>(null);
   const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
   const logBottomRef   = useRef<HTMLDivElement>(null);
-  const wsOpenedRef    = useRef(false);
+  const wsOpenedRef    = useRef(false);   // guard: did WS ever open?
 
   // ---- Auto-scroll log -----------------------------------------------------
   useEffect(() => {
@@ -147,6 +148,7 @@ export default function Home() {
   const addMessage = useCallback((text: string, kind: 'info' | 'error' | 'done' = 'info') => {
     const ts  = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     const cls = kind === 'error' ? 'log-error' : kind === 'done' ? 'log-done' : '';
+    // store as "CLASS|||TEXT" so we can render with the right class
     setMessages(prev => [...prev, `${cls}|||[${ts}] ${text}`]);
   }, []);
 
@@ -207,6 +209,7 @@ export default function Home() {
     const ws  = new WebSocket(url);
     wsRef.current = ws;
 
+    // Fallback timer: if WS hasn't opened in 5 s, switch to polling
     const fallback = setTimeout(() => {
       if (!wsOpenedRef.current) {
         ws.close();
@@ -235,6 +238,7 @@ export default function Home() {
           handleError(msg.message || 'Pipeline error');
         }
       } catch {
+        // Non-JSON frame — display raw
         if (evt.data) addMessage(String(evt.data));
       }
     };
@@ -252,6 +256,7 @@ export default function Home() {
     e.preventDefault();
     if (!target.trim() || loading) return;
 
+    // Reset all pipeline state
     setLoading(true);
     setAppStatus('running');
     setMessages([]);
@@ -291,11 +296,18 @@ export default function Home() {
   // ---- Copy report ---------------------------------------------------------
   const handleCopy = useCallback(() => {
     const md = results?.presenter_result?.report_markdown ?? '';
-    navigator.clipboard.writeText(md).then(() => {
-      setCopyHint(true);
-      setTimeout(() => setCopyHint(false), 2000);
-    });
-  }, [results]);
+    // navigator.clipboard is only available in secure contexts (HTTPS / localhost)
+    if (!navigator?.clipboard) {
+      addMessage('Clipboard not available in this context.', 'error');
+      return;
+    }
+    navigator.clipboard.writeText(md)
+      .then(() => {
+        setCopyHint(true);
+        setTimeout(() => setCopyHint(false), 2000);
+      })
+      .catch(() => addMessage('Clipboard write failed — copy manually.', 'error'));
+  }, [results, addMessage]);
 
   // ---- Cleanup on unmount --------------------------------------------------
   useEffect(() => {
@@ -414,8 +426,9 @@ export default function Home() {
                 <div className="log">
                   {messages.map((raw, i) => {
                     const [cls, text] = raw.includes('|||') ? raw.split('|||') : ['', raw];
+                    // Use index key: safe for append-only lists; trim to avoid trailing space
                     return (
-                      <div key={i} className={`log-line ${cls}`}>{text}</div>
+                      <div key={i} className={['log-line', cls].filter(Boolean).join(' ')}>{text}</div>
                     );
                   })}
                   <div ref={logBottomRef} />
