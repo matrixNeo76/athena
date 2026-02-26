@@ -1,6 +1,7 @@
 """
 ATHENA Intelligence Orchestrator
-FastAPI entry point — mounts all routers, configures CORS and health endpoint.
+FastAPI entry point — mounts all routers, configures CORS, logging,
+and static file serving for generated reports.
 
 Run locally:
     uvicorn app.main:app --reload --port 8000
@@ -8,19 +9,33 @@ Run locally:
 Environment variables (copy .env.example → .env):
     See .env.example
 """
+import logging
+import pathlib
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.analysis import router as analysis_router, webhook_router, ws_router
 from app.core.config import settings
 from app.models.schemas import HealthResponse
 
-# ──────────────────────────────────────────────
-# App factory
-# ──────────────────────────────────────────────
+# ── Logging configuration ─────────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
+# ── Reports directory  (must exist *before* StaticFiles is mounted) ───────────
+# TODO-10 ✓ — static file serving for generated Markdown reports
+_reports_dir = pathlib.Path(settings.REPORTS_DIR).resolve()
+_reports_dir.mkdir(parents=True, exist_ok=True)
+logger.info("[STARTUP] Reports directory: %s", _reports_dir)
+
+# ── App factory ───────────────────────────────────────────────────────────────
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -32,10 +47,7 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# ──────────────────────────────────────────────
-# CORS  (allow frontend on any port during dev)
-# ──────────────────────────────────────────────
-
+# ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -44,32 +56,32 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ──────────────────────────────────────────────
-# Routers
-# ──────────────────────────────────────────────
-
+# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(
     analysis_router,
     prefix="/api/v1/analysis",
     tags=["Analysis Pipeline"],
 )
-
 app.include_router(
     webhook_router,
     prefix="/api/v1/webhook",
     tags=["Webhooks"],
 )
-
 app.include_router(
     ws_router,
     prefix="/ws/analysis",
     tags=["WebSocket"],
 )
 
-# ──────────────────────────────────────────────
-# Health check
-# ──────────────────────────────────────────────
+# ── Static file serving for Markdown reports  (TODO-10 ✓) ─────────────────────
+# Mounted AFTER all routers so /api/v1/analysis/* routes keep precedence.
+app.mount(
+    "/api/v1/reports",
+    StaticFiles(directory=str(_reports_dir)),
+    name="reports",
+)
 
+# ── Health check ──────────────────────────────────────────────────────────────
 @app.get(
     "/api/v1/health",
     response_model=HealthResponse,
@@ -83,18 +95,23 @@ async def health():
         version=settings.APP_VERSION,
         timestamp=datetime.now(timezone.utc),
         components={
-            "orchestrator": "ok",
-            "job_store": "ok (in-memory)",
-            "scout_agent": "ready",
-            "analyst_service": "ready",
-            "strategy_agent": "ready",
+            "orchestrator":      "ok",
+            "job_store":         "ok (in-memory)",
+            "scout_agent":       "ready",
+            "analyst_service":   "ready",
+            "strategy_agent":    "ready",
             "presenter_service": "ready",
-            "falkordb": "not connected (TODO-9)",
-            "postgresql": "not connected (TODO-9)",
+            "report_serving":    f"ok — {_reports_dir}",
+            "falkordb":          "not connected (TODO-9)",
+            "postgresql":        "not connected (TODO-9)",
         },
     )
 
 
 @app.get("/", include_in_schema=False)
 async def root():
-    return {"service": settings.APP_NAME, "docs": "/docs", "version": settings.APP_VERSION}
+    return {
+        "service": settings.APP_NAME,
+        "docs":    "/docs",
+        "version": settings.APP_VERSION,
+    }

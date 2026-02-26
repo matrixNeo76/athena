@@ -1,0 +1,52 @@
+# ── ATHENA — full local stack ─────────────────────────────────────────────────
+# Usage:
+#   1. cp backend/.env.example backend/.env    # fill in credentials
+#   2. docker compose up --build
+#
+# Frontend: http://localhost:3000
+# Backend:  http://localhost:8000  (docs at /docs)
+
+version: '3.9'
+
+services:
+
+  # ── FastAPI backend ──────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      # Named volume keeps reports across container restarts
+      - reports_data:/app/reports
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── Next.js frontend ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked at build time — browser reaches backend on localhost:8000
+        NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  reports_data:
+    driver: local
