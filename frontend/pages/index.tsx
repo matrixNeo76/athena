@@ -45,6 +45,9 @@ const STAGE_LABEL: Record<string, string> = {
   PRESENTER: 'Presenter',
 };
 
+/** Maximum number of log lines kept in memory to prevent unbounded growth */
+const MAX_LOG_LINES = 500;
+
 type AppStatus = 'idle' | 'running' | 'done' | 'error';
 
 // ---------------------------------------------------------------------------
@@ -145,11 +148,20 @@ export default function Home() {
   }, [messages]);
 
   // ---- Helpers -------------------------------------------------------------
-  const addMessage = useCallback((text: string, kind: 'info' | 'error' | 'done' = 'info') => {
-    const ts  = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const addMessage = useCallback((
+    text: string,
+    kind: 'info' | 'error' | 'done' = 'info',
+  ) => {
+    const ts  = new Date().toLocaleTimeString([], {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
     const cls = kind === 'error' ? 'log-error' : kind === 'done' ? 'log-done' : '';
-    // store as "CLASS|||TEXT" so we can render with the right class
-    setMessages(prev => [...prev, `${cls}|||[${ts}] ${text}`]);
+    // Store as "CLASS|||TEXT" so render can apply the right CSS class.
+    // Cap at MAX_LOG_LINES to prevent unbounded memory growth.
+    setMessages(prev => {
+      const next = [...prev, `${cls}|||[${ts}] ${text}`];
+      return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
+    });
   }, []);
 
   const stopPolling = useCallback(() => {
@@ -167,7 +179,10 @@ export default function Home() {
       setResults(res);
       addMessage('Results loaded.', 'done');
     } catch (e: unknown) {
-      addMessage(`Could not load results: ${e instanceof Error ? e.message : String(e)}`, 'error');
+      addMessage(
+        `Could not load results: ${e instanceof Error ? e.message : String(e)}`,
+        'error',
+      );
     }
   }, [addMessage, stopPolling]);
 
@@ -324,7 +339,7 @@ export default function Home() {
     <>
       <Head>
         <title>ATHENA — Market Intelligence Platform</title>
-        <meta name="description" content="Autonomous Multi-Agent Market Intelligence & Strategy" />
+        <meta name="description" content="Autonomous Multi-Agent Market Intelligence &amp; Strategy" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -425,10 +440,16 @@ export default function Home() {
                 <p className="section-title-sm">Pipeline Log</p>
                 <div className="log">
                   {messages.map((raw, i) => {
-                    const [cls, text] = raw.includes('|||') ? raw.split('|||') : ['', raw];
-                    // Use index key: safe for append-only lists; trim to avoid trailing space
+                    const [cls, text] = raw.includes('|||')
+                      ? raw.split('|||')
+                      : ['', raw];
                     return (
-                      <div key={i} className={['log-line', cls].filter(Boolean).join(' ')}>{text}</div>
+                      <div
+                        key={i}
+                        className={['log-line', cls].filter(Boolean).join(' ')}
+                      >
+                        {text}
+                      </div>
                     );
                   })}
                   <div ref={logBottomRef} />
@@ -461,7 +482,10 @@ export default function Home() {
                   <section className="card">
                     <p className="section-title-sm">
                       🎯 Deck Outline &nbsp;
-                      <span style={{ opacity: 0.5, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                      <span style={{
+                        opacity: 0.5, fontWeight: 400,
+                        textTransform: 'none', letterSpacing: 0,
+                      }}>
                         ({results.presenter_result.deck_outline.length} slides)
                       </span>
                     </p>
