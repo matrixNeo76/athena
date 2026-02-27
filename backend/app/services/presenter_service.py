@@ -10,6 +10,9 @@ Pipeline position: PRESENTER stage (last before DONE)
 Input:  StrategyResult (from strategy_agent.py  — TODO-4)
         AnalystResult  (from analyst_service.py — TODO-5, optional)
 Output: PresenterResult (report_markdown, deck_outline, report_path, report_url)
+
+Note: report_url points to /api/v1/reports/{job_id}.md which is served by the
+      FastAPI StaticFiles mount configured in main.py (TODO-10 ✓).
 """
 import logging
 from datetime import datetime, timezone
@@ -27,7 +30,7 @@ from app.models.schemas import (
 logger = logging.getLogger(__name__)
 
 
-# ── helpers ──────────────────────────────────────────────────────────────
+# ── helpers ────────────────────────────────────────────────────────────────
 
 def _fmt_bullets(items: list[str], indent: str = "") -> str:
     return "\n".join(f"{indent}- {item}" for item in items) if items else f"{indent}- N/A"
@@ -37,7 +40,7 @@ def _confidence_badge(level: str) -> str:
     return {"high": "🟢 High", "medium": "🟡 Medium", "low": "🔴 Low"}.get(level.lower(), level)
 
 
-# ── Markdown report builder ──────────────────────────────────────────────────
+# ── Markdown report builder ──────────────────────────────────────────────────────
 
 def _build_report_markdown(
     job_id: str,
@@ -82,9 +85,9 @@ def _build_report_markdown(
             "|---|---|---|---|",
         ]
         for c in analyst.competitors:
-            pos = c.market_position or "—"
+            pos   = c.market_position or "—"
             badge = _confidence_badge(c.confidence)
-            flag = "⚠️ Yes" if c.is_assumption else "✅ No"
+            flag  = "⚠️ Yes" if c.is_assumption else "✅ No"
             lines.append(f"| {c.name} | {pos} | {badge} | {flag} |")
         lines += [""]
         if analyst.high_confidence_competitors:
@@ -97,8 +100,8 @@ def _build_report_markdown(
     lines += ["## 3. Market Trends", ""]
     if analyst and analyst.trends:
         for t in analyst.trends:
-            badge = _confidence_badge(t.impact)
-            tf = f" *(~{t.timeframe})*" if t.timeframe else ""
+            badge      = _confidence_badge(t.impact)
+            tf         = f" *(~{t.timeframe})*" if t.timeframe else ""
             assumption = " ⚠️ *assumption*" if t.is_assumption else ""
             lines += [f"### {t.title} — {badge}{assumption}", "", f"{t.description}{tf}", ""]
     else:
@@ -147,7 +150,11 @@ def _build_report_markdown(
         if gtm.icp:
             icp = gtm.icp
             lines += ["### Ideal Customer Profile (ICP)", "", icp.description, ""]
-            for label, val in [("Company Size", icp.company_size), ("Industry", icp.industry), ("Geography", icp.geography)]:
+            for label, val in [
+                ("Company Size", icp.company_size),
+                ("Industry",     icp.industry),
+                ("Geography",    icp.geography),
+            ]:
                 if val:
                     lines.append(f"- **{label}:** {val}")
             lines += [""]
@@ -184,7 +191,7 @@ def _build_report_markdown(
             next_steps.extend(phase.actions[:3])
     if not next_steps and strategy.swot:
         next_steps = [
-            f"Address weakness: {strategy.swot.weaknesses[0]}" if strategy.swot.weaknesses else "",
+            f"Address weakness: {strategy.swot.weaknesses[0]}"   if strategy.swot.weaknesses    else "",
             f"Exploit opportunity: {strategy.swot.opportunities[0]}" if strategy.swot.opportunities else "",
         ]
         next_steps = [ns for ns in next_steps if ns]
@@ -205,7 +212,7 @@ def _build_report_markdown(
     return "\n".join(lines)
 
 
-# ── Deck outline builder ─────────────────────────────────────────────────────
+# ── Deck outline builder ────────────────────────────────────────────────────────────
 
 def _build_deck_outline(
     strategy: StrategyResult,
@@ -217,9 +224,14 @@ def _build_deck_outline(
     # Slide 1: Cover
     tagline = strategy.positioning_options[0].name if strategy.positioning_options else "Competitive Intelligence Report"
     slides.append(DeckSlide(
-        slide_number=1, title=f"ATHENA — {target}",
-        bullets=["Competitive Intelligence Report", f"Target: {target}", tagline,
-                 f"Generated: {datetime.now(timezone.utc).strftime('%B %Y')}"],
+        slide_number=1,
+        title=f"ATHENA — {target}",
+        bullets=[
+            "Competitive Intelligence Report",
+            f"Target: {target}",
+            tagline,
+            f"Generated: {datetime.now(timezone.utc).strftime('%B %Y')}",
+        ],
         speaker_note="Introduce ATHENA and the target. Mention the multi-agent pipeline.",
     ))
 
@@ -229,7 +241,8 @@ def _build_deck_outline(
         if len(s.strip()) > 10
     ][:4] or ["Strategic analysis complete", "Key findings available across all sections"]
     slides.append(DeckSlide(
-        slide_number=2, title="Executive Summary",
+        slide_number=2,
+        title="Executive Summary",
         bullets=summary_bullets,
         speaker_note="High-level takeaways. Keep it to 3-4 sentences max.",
     ))
@@ -238,11 +251,16 @@ def _build_deck_outline(
     comp_count  = len(analyst.competitors) if analyst else "N/A"
     trend_count = len(analyst.trends)      if analyst else "N/A"
     seg_count   = len(analyst.segments)    if analyst else "N/A"
-    top_comps = ", ".join(c.name for c in analyst.competitors[:4]) if analyst and analyst.competitors else "See full report"
+    top_comps   = ", ".join(c.name for c in analyst.competitors[:4]) if analyst and analyst.competitors else "See full report"
     slides.append(DeckSlide(
-        slide_number=3, title="Market Landscape",
-        bullets=[f"{comp_count} competitors identified", f"Top: {top_comps}",
-                 f"{trend_count} market trends tracked", f"{seg_count} customer segments analysed"],
+        slide_number=3,
+        title="Market Landscape",
+        bullets=[
+            f"{comp_count} competitors identified",
+            f"Top: {top_comps}",
+            f"{trend_count} market trends tracked",
+            f"{seg_count} customer segments analysed",
+        ],
         speaker_note="Set the scene — how crowded is the market?",
     ))
 
@@ -254,7 +272,8 @@ def _build_deck_outline(
             comp_bullets.append(f"{badge} {c.name} — {c.market_position or c.description[:60]}")
     comp_bullets = comp_bullets or ["No confirmed competitors identified"]
     slides.append(DeckSlide(
-        slide_number=4, title="Competitive Analysis",
+        slide_number=4,
+        title="Competitive Analysis",
         bullets=comp_bullets,
         speaker_note="Walk through top competitors. ✅ = confirmed, ⚠️ = inferred.",
     ))
@@ -267,7 +286,8 @@ def _build_deck_outline(
             trend_bullets.append(f"{icon} {t.title}")
     trend_bullets = trend_bullets or ["Trend data not available"]
     slides.append(DeckSlide(
-        slide_number=5, title="Market Trends",
+        slide_number=5,
+        title="Market Trends",
         bullets=trend_bullets,
         speaker_note="Highlight high-impact trends (🔴) first.",
     ))
@@ -282,7 +302,8 @@ def _build_deck_outline(
         if s.threats:       swot_bullets.append(f"⚠️ T: {s.threats[0]}")
     swot_bullets = swot_bullets or ["SWOT analysis not available"]
     slides.append(DeckSlide(
-        slide_number=6, title="SWOT Analysis",
+        slide_number=6,
+        title="SWOT Analysis",
         bullets=swot_bullets,
         speaker_note="Use 2x2 SWOT grid visual.",
     ))
@@ -292,14 +313,17 @@ def _build_deck_outline(
     if strategy.positioning_options:
         best = strategy.positioning_options[strategy.recommended_positioning_index]
         pos_bullets = [
-            f"Name: {best.name}", f"Statement: {best.statement}",
-            f"Audience: {best.target_audience}", f"Differentiator: {best.key_differentiator}",
+            f"Name: {best.name}",
+            f"Statement: {best.statement}",
+            f"Audience: {best.target_audience}",
+            f"Differentiator: {best.key_differentiator}",
             f"Risk: {best.risk_level}",
         ]
     else:
         pos_bullets = ["Positioning options not available"]
     slides.append(DeckSlide(
-        slide_number=7, title="Recommended Positioning",
+        slide_number=7,
+        title="Recommended Positioning",
         bullets=pos_bullets,
         speaker_note="Why this positioning? Tie back to SWOT opportunities and competitor gaps.",
     ))
@@ -312,11 +336,13 @@ def _build_deck_outline(
         if gtm.channels:          gtm_bullets.append(f"Channels: {', '.join(gtm.channels[:3])}")
         if gtm.launch_phases:
             gtm_bullets.append(f"Phase 1: {gtm.launch_phases[0].name}")
-            if len(gtm.launch_phases) > 1: gtm_bullets.append(f"Phase 2: {gtm.launch_phases[1].name}")
+            if len(gtm.launch_phases) > 1:
+                gtm_bullets.append(f"Phase 2: {gtm.launch_phases[1].name}")
         if gtm.competitive_moat:  gtm_bullets.append(f"Moat: {gtm.competitive_moat[:80]}")
     gtm_bullets = gtm_bullets or ["GTM plan not available"]
     slides.append(DeckSlide(
-        slide_number=8, title="GTM Plan & Next Steps",
+        slide_number=8,
+        title="GTM Plan & Next Steps",
         bullets=gtm_bullets,
         speaker_note="Close with action plan. Emphasise 30/60/90-day milestones.",
     ))
@@ -324,7 +350,7 @@ def _build_deck_outline(
     return slides
 
 
-# ── File writer ───────────────────────────────────────────────────────────────
+# ── File writer ──────────────────────────────────────────────────────────────────
 
 def _write_report(job_id: str, markdown: str) -> str:
     reports_dir = Path(settings.REPORTS_DIR).resolve()
@@ -335,7 +361,7 @@ def _write_report(job_id: str, markdown: str) -> str:
     return str(report_path)
 
 
-# ── Main entry point ───────────────────────────────────────────────────────────
+# ── Main entry point ────────────────────────────────────────────────────────────────
 
 async def run_presenter(
     job_id: str,
@@ -350,13 +376,19 @@ async def run_presenter(
     2. Build 8-slide deck outline
     3. Write .md file to REPORTS_DIR/{job_id}.md
     4. Return PresenterResult
+
+    The generated report is served statically at /api/v1/reports/{job_id}.md
+    via the FastAPI StaticFiles mount in main.py (TODO-10 ✓).
     """
-    logger.info("[PRESENTER] run_presenter started — job='%s', target='%s'", job_id, strategy_result.target)
+    logger.info(
+        "[PRESENTER] run_presenter started — job='%s', target='%s'",
+        job_id, strategy_result.target,
+    )
 
     report_markdown = _build_report_markdown(job_id, strategy_result, analyst_result)
     deck_outline    = _build_deck_outline(strategy_result, analyst_result)
     report_path     = _write_report(job_id, report_markdown)
-    report_url      = f"/api/v1/reports/{job_id}.md"  # TODO-10: mount static files
+    report_url      = f"/api/v1/reports/{job_id}.md"
 
     result = PresenterResult(
         job_id=job_id,
@@ -367,5 +399,8 @@ async def run_presenter(
         report_url=report_url,
         presented_at=datetime.now(timezone.utc),
     )
-    logger.info("[PRESENTER] complete — %d slides, %d chars report", len(deck_outline), len(report_markdown))
+    logger.info(
+        "[PRESENTER] complete — %d slides, %d chars report",
+        len(deck_outline), len(report_markdown),
+    )
     return result

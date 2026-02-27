@@ -2,6 +2,11 @@
 ATHENA - Scout Agent integration
 TODO-3: Calls the Complete.dev Scout Agent and parses SCOUT_JSON_OUTPUT
         into a validated ScoutResult Pydantic model.
+
+FIX: _extract_json() — previous regex \{{.*?\}} matched the literal string
+     '{{...}}' (double braces) due to Python raw-string escaping, so code-fence
+     extraction NEVER succeeded. Replaced with a reliable fence regex and a
+     find/rfind fallback that correctly locates the first { ... last } span.
 """
 import json
 import logging
@@ -67,11 +72,7 @@ SCOUT_JSON_OUTPUT SCHEMA:
       "is_assumption": false
     }}
   ],
-  "links": [{{
-    "url": "string",
-    "title": "string or null",
-    "relevance": "string or null"
-  }}],
+  "links": [{{"url": "string", "title": "string or null", "relevance": "string or null"}}],
   "data_quality": {{
     "coverage_score": 0,
     "freshness": "string or null",
@@ -86,16 +87,33 @@ Return ONLY the JSON object. Start your response with {{ and end with }}.
 
 
 def _extract_json(raw: str) -> str:
+    """
+    Robustly extracts a JSON object from an agent response that may contain
+    extra text, explanations, or code fences.
+
+    Strategy:
+      1. Code fence: agent wrapped JSON in ```json...``` despite instructions.
+      2. first-{ / last-} span: handles raw JSON and JSON with surrounding text.
+    """
     text = raw.strip()
-    fence_match = re.search(r"```(?:json)?\s*(\{{.*?\}})\s*```", text, re.DOTALL)
+
+    # 1. Code fence (```json ... ``` or ``` ... ```)
+    fence_match = re.search(r"```(?:json)?\s*\n?([\s\S]*?)\n?\s*```", text)
     if fence_match:
-        return fence_match.group(1).strip()
-    if text.startswith("{"):
-        return text
-    brace_match = re.search(r"(\{.*\})", text, re.DOTALL)
-    if brace_match:
-        return brace_match.group(1).strip()
-    raise ValueError(f"Scout Agent response contains no JSON. First 300 chars: {text[:300]}")
+        inner = fence_match.group(1).strip()
+        if inner.startswith("{"):
+            return inner
+
+    # 2. Locate the outermost JSON object: first { to last }
+    start = text.find("{")
+    end   = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+
+    raise ValueError(
+        f"[SCOUT] No JSON object found in agent response. "
+        f"First 300 chars: {text[:300]}"
+    )
 
 
 async def run_scout(

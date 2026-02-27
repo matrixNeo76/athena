@@ -2,6 +2,9 @@
 ATHENA - Strategy Agent integration
 TODO-4: Calls the Complete.dev Strategy Agent and parses STRATEGY_JSON_OUTPUT
         into a validated StrategyResult Pydantic model.
+
+FIX: _extract_json() — same fence-regex double-brace bug as scout_agent.py.
+     Corrected with the same reliable find/rfind approach.
 """
 import json
 import logging
@@ -77,7 +80,7 @@ Return ONLY a single valid JSON object:
     "channels": ["..."],
     "messaging_pillars": ["..."],
     "value_proposition": "...",
-    "launch_phases": [{{"name": "...", "duration": "...", "actions": ["..."], "success_metrics": ["..."]}}],
+    "launch_phases": [{{"name": "...", "duration": "...", "actions": ["..."], "success_metrics": ["..."]}}}],
     "competitive_moat": "..."
   }},
   "strategic_summary": "2-3 sentence executive summary",
@@ -91,16 +94,33 @@ Start with {{ and end with }}.
 
 
 def _extract_json(raw: str) -> str:
+    """
+    Robustly extracts a JSON object from an agent response that may contain
+    extra text, explanations, or code fences.
+
+    Strategy:
+      1. Code fence: agent wrapped JSON in ```json...``` despite instructions.
+      2. first-{ / last-} span: handles raw JSON and JSON with surrounding text.
+    """
     text = raw.strip()
-    fence_match = re.search(r"```(?:json)?\s*(\{{.*?\}})\s*```", text, re.DOTALL)
+
+    # 1. Code fence (```json ... ``` or ``` ... ```)
+    fence_match = re.search(r"```(?:json)?\s*\n?([\s\S]*?)\n?\s*```", text)
     if fence_match:
-        return fence_match.group(1).strip()
-    if text.startswith("{"):
-        return text
-    brace_match = re.search(r"(\{.*\})", text, re.DOTALL)
-    if brace_match:
-        return brace_match.group(1).strip()
-    raise ValueError(f"[STRATEGY] No JSON in agent response. First 300 chars: {text[:300]}")
+        inner = fence_match.group(1).strip()
+        if inner.startswith("{"):
+            return inner
+
+    # 2. Locate the outermost JSON object: first { to last }
+    start = text.find("{")
+    end   = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        return text[start : end + 1]
+
+    raise ValueError(
+        f"[STRATEGY] No JSON object found in agent response. "
+        f"First 300 chars: {text[:300]}"
+    )
 
 
 async def run_strategy(analyst_result: AnalystResult) -> StrategyResult:
