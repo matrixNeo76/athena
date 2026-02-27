@@ -1,12 +1,13 @@
 # ── ATHENA — full local stack ─────────────────────────────────────────────────
 # Usage:
-#   1. cp backend/.env.example backend/.env    # fill in credentials
+#   1. cp backend/.env.example backend/.env    # fill in credentials (or leave empty for stub mode)
 #   2. docker compose up --build
 #
 # Frontend: http://localhost:3000
-# Backend:  http://localhost:8000  (docs at /docs)
-
-version: '3.9'
+# Backend:  http://localhost:8000  (API docs at /docs)
+#
+# TIP: If DEPLOY_AI_CLIENT_ID is empty in backend/.env, ATHENA runs in STUB MODE
+# and returns realistic demo data without real API credentials.
 
 services:
 
@@ -36,7 +37,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # Baked at build time — browser reaches backend on localhost:8000
+        # NEXT_PUBLIC_API_URL is baked at build time.
+        # From the browser (on the host), the backend is reachable at localhost:8000.
         NEXT_PUBLIC_API_URL: "http://localhost:8000"
     ports:
       - "3000:3000"

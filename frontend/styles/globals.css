@@ -54,12 +54,7 @@ body {
   justify-content: space-between;
 }
 
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
+.logo { display: flex; align-items: center; gap: 0.5rem; }
 .logo-icon { font-size: 1.6rem; }
 
 .logo-text {
@@ -101,8 +96,6 @@ body {
   box-shadow: var(--shadow);
 }
 
-/* ---- Form card ----------------------------------------------------------- */
-
 .form-card { border-top: 2px solid var(--accent); }
 
 .section-title {
@@ -124,7 +117,6 @@ body {
 /* ---- Form ---------------------------------------------------------------- */
 
 .form { display: flex; flex-direction: column; gap: 1rem; }
-
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 
 .label {
@@ -153,9 +145,7 @@ body {
 }
 
 .input::placeholder { color: var(--text-muted); opacity: 0.6; }
-
 .select { cursor: pointer; }
-
 .select option { background: var(--surface-2); color: var(--text); }
 
 /* ---- Buttons ------------------------------------------------------------- */
@@ -173,13 +163,10 @@ body {
   gap: 0.4rem;
   font-family: inherit;
   white-space: nowrap;
+  text-decoration: none;
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
@@ -245,19 +232,14 @@ body {
 }
 
 .job-target { font-weight: 600; font-size: 0.9rem; }
-
-.job-id {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-  font-family: var(--mono);
-}
+.job-id { color: var(--text-muted); font-size: 0.75rem; font-family: var(--mono); }
 
 /* ---- Timeline ------------------------------------------------------------ */
 
 .timeline {
   display: flex;
   align-items: center;
-  padding-bottom: 2rem;       /* room for labels below dots */
+  padding-bottom: 2rem;
   margin-bottom: 0.75rem;
   position: relative;
 }
@@ -327,8 +309,6 @@ body {
   background: var(--border);
   min-width: 32px;
   transition: background 0.4s;
-  /* align to center of dots (19px from top of flex container) */
-  margin-bottom: 0;
   align-self: center;
 }
 
@@ -380,9 +360,143 @@ body {
 .log::-webkit-scrollbar { width: 5px; }
 .log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-.log-line { color: #7dd3fc; padding: 0.05rem 0; }
+.log-line       { color: #7dd3fc; padding: 0.05rem 0; }
 .log-line.log-error { color: var(--red); }
 .log-line.log-done  { color: var(--green); }
+
+/* ---- Metrics grid -------------------------------------------------------- */
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.875rem;
+}
+
+.metric-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+
+.metric-item:hover { border-color: var(--accent); }
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: var(--mono);
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+
+.metric-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+/* ---- SWOT grid ----------------------------------------------------------- */
+
+.swot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.swot-quadrant {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 8px;
+  padding: 1rem 1.1rem;
+  transition: border-color 0.2s;
+}
+
+.swot-s { border-left-color: var(--green); }
+.swot-w { border-left-color: var(--red); }
+.swot-o { border-left-color: var(--accent); }
+.swot-t { border-left-color: var(--gold); }
+
+.swot-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.6rem;
+  color: var(--text-muted);
+}
+
+.swot-items {
+  padding-left: 1.1rem;
+  font-size: 0.8rem;
+  color: var(--text);
+  line-height: 1.65;
+}
+
+.swot-items li { margin-bottom: 0.2rem; }
+
+/* ---- Intel row (Competitors + Trends) ------------------------------------ */
+
+.intel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.intel-col { display: flex; flex-direction: column; }
+
+.intel-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text);
+  font-weight: 500;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.chip:hover { border-color: var(--accent); color: var(--accent); }
+
+.intel-list {
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.intel-list li { margin-bottom: 0.25rem; }
+
+/* ---- GTM highlight ------------------------------------------------------- */
+
+.gtm-highlight { border-left: 3px solid var(--gold); }
+
+.gtm-vp {
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--text);
+  border-left: 3px solid var(--gold);
+  padding-left: 1rem;
+  margin: 0.5rem 0 1rem;
+  line-height: 1.6;
+}
+
+.gtm-positioning {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
 
 /* ---- Results ------------------------------------------------------------- */
 
@@ -443,18 +557,8 @@ body {
   margin-bottom: 0.35rem;
 }
 
-.slide-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin-bottom: 0.2rem;
-  line-height: 1.35;
-}
-
-.slide-subtitle {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-}
+.slide-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.2rem; line-height: 1.35; }
+.slide-subtitle { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.5rem; }
 
 .slide-bullets {
   padding-left: 1.1rem;
@@ -502,18 +606,16 @@ body {
 
 /* ---- Copy feedback ------------------------------------------------------- */
 
-.copy-hint {
-  font-size: 0.72rem;
-  color: var(--green);
-  margin-left: 0.5rem;
-  transition: opacity 0.3s;
-}
+.copy-hint { font-size: 0.72rem; color: var(--green); margin-left: 0.5rem; transition: opacity 0.3s; }
 
 /* ---- Responsive ---------------------------------------------------------- */
 
-@media (max-width: 600px) {
+@media (max-width: 700px) {
   .header-inner { flex-direction: column; gap: 0.25rem; }
   .job-header { flex-direction: column; }
   .tl-label { font-size: 0.62rem; }
   .deck-grid { grid-template-columns: 1fr; }
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .swot-grid { grid-template-columns: 1fr; }
+  .intel-row { grid-template-columns: 1fr; }
 }

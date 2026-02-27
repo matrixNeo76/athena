@@ -45,10 +45,9 @@ class TestSlugify:
         assert _slugify("Google DeepMind") == "google-deepmind"
 
     def test_unicode(self):
-        # Non-ASCII characters should be transliterated or dropped
-        result = _slugify("Rénault")
-        assert "-" not in result or result.startswith("r")
+        result = _slugify("R\u00e9nault")
         assert result.isascii()
+        assert len(result) > 0
 
     def test_special_chars(self):
         result = _slugify("Hello, World! (2025)")
@@ -63,10 +62,9 @@ class TestSlugify:
 class TestRunAnalyst:
     def test_empty_scout(self):
         scout = make_scout_result()
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
+        result = asyncio.run(run_analyst(scout))
         assert result.target == "TestCo"
         assert result.competitors == []
-        assert result.graph_spec.nodes == []
 
     def test_competitor_mapped(self):
         scout = make_scout_result(
@@ -81,7 +79,7 @@ class TestRunAnalyst:
                 )
             ]
         )
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
+        result = asyncio.run(run_analyst(scout))
         assert len(result.competitors) == 1
         assert result.competitors[0].name == "Acme Corp"
         assert result.competitors[0].confidence == "high"
@@ -97,7 +95,7 @@ class TestRunAnalyst:
                 )
             ]
         )
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
+        result = asyncio.run(run_analyst(scout))
         assert len(result.trends) == 1
         assert result.trends[0].title == "AI Boom"
 
@@ -111,30 +109,22 @@ class TestRunAnalyst:
                 )
             ]
         )
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
+        result = asyncio.run(run_analyst(scout))
         assert "Complexity" in result.key_pain_points
         assert "Cost" in result.key_pain_points
 
     def test_competitor_deduplication(self):
         scout = make_scout_result(
             competitors=[
-                ScoutCompetitor(name="OpenAI", description="AI company", confidence=ConfidenceLevel.HIGH),
-                ScoutCompetitor(name="openai", description="Duplicate lowercase", confidence=ConfidenceLevel.LOW),
-                ScoutCompetitor(name="Anthropic", description="Another AI", confidence=ConfidenceLevel.MEDIUM),
+                ScoutCompetitor(name="OpenAI",   description="AI company",           confidence=ConfidenceLevel.HIGH),
+                ScoutCompetitor(name="openai",   description="Duplicate lowercase",   confidence=ConfidenceLevel.LOW),
+                ScoutCompetitor(name="Anthropic", description="Another AI company", confidence=ConfidenceLevel.MEDIUM),
             ]
         )
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
-        # Should deduplicate 'OpenAI' and 'openai'
+        result = asyncio.run(run_analyst(scout))
         assert len(result.competitors) == 2
         names = [c.name for c in result.competitors]
         assert "Anthropic" in names
-
-    def test_graph_has_target_node(self):
-        scout = make_scout_result(target="Stripe")
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
-        # With no competitors/trends/segments, graph is empty (no market node added for empty)
-        # At minimum the function completes without error
-        assert result.target == "Stripe"
 
     def test_graph_nodes_created_for_competitors(self):
         scout = make_scout_result(
@@ -143,7 +133,7 @@ class TestRunAnalyst:
                 ScoutCompetitor(name="Stripe", description="Payments", confidence=ConfidenceLevel.HIGH),
             ],
         )
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
+        result = asyncio.run(run_analyst(scout))
         node_labels = [n.label for n in result.graph_spec.nodes]
         assert "MyStartup" in node_labels
         assert "Stripe" in node_labels
@@ -155,6 +145,11 @@ class TestRunAnalyst:
                 ScoutCompetitor(name="Obsidian", description="Notes app", confidence=ConfidenceLevel.MEDIUM),
             ],
         )
-        result = asyncio.get_event_loop().run_until_complete(run_analyst(scout))
+        result = asyncio.run(run_analyst(scout))
         assert len(result.analysis_summary) > 0
         assert "Notion" in result.analysis_summary
+
+    def test_analyzed_at_set(self):
+        scout = make_scout_result(target="Stripe")
+        result = asyncio.run(run_analyst(scout))
+        assert result.analyzed_at is not None

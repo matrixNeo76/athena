@@ -3,6 +3,13 @@ const nextConfig = {
   reactStrictMode: true,
 
   /**
+   * Standalone output — bundles only the files needed for production.
+   * Results in a much smaller Docker image (copies only required node_modules).
+   * See: https://nextjs.org/docs/pages/api-reference/next-config-js/output
+   */
+  output: 'standalone',
+
+  /**
    * API & WebSocket rewrites.
    *
    * In local dev, NEXT_PUBLIC_API_URL is http://localhost:8000 (set in .env.local).

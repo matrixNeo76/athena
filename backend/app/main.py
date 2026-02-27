@@ -11,6 +11,7 @@ Environment variables (copy .env.example → .env):
 """
 import logging
 import pathlib
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI
@@ -21,7 +22,7 @@ from app.api.v1.analysis import router as analysis_router, webhook_router, ws_ro
 from app.core.config import settings
 from app.models.schemas import HealthResponse
 
-# ── Logging configuration ─────────────────────────────────────────────────────
+# ── Logging configuration ──────────────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(name)s — %(message)s",
@@ -29,13 +30,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ── Reports directory  (must exist *before* StaticFiles is mounted) ───────────
-# TODO-10 ✓ — static file serving for generated Markdown reports
+# ── Reports directory  (must exist *before* StaticFiles is mounted) ───────────────────
 _reports_dir = pathlib.Path(settings.REPORTS_DIR).resolve()
 _reports_dir.mkdir(parents=True, exist_ok=True)
-logger.info("[STARTUP] Reports directory: %s", _reports_dir)
 
-# ── App factory ───────────────────────────────────────────────────────────────
+
+# ── Lifespan (startup / shutdown) ──────────────────────────────────────────────────
+# FastAPI recommends the lifespan context manager over deprecated @app.on_event.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── Startup ──────────────────────────────────────────────────────────
+    logger.info(
+        "[STARTUP] ATHENA %s — stub_mode=%s — reports_dir=%s",
+        settings.APP_VERSION,
+        settings.is_stub_mode,
+        _reports_dir,
+    )
+    if settings.is_stub_mode:
+        logger.warning(
+            "[STARTUP] STUB MODE ACTIVE — pipeline will return demo data. "
+            "Set DEPLOY_AI_CLIENT_ID in .env to enable live agents."
+        )
+    yield
+    # ── Shutdown ──────────────────────────────────────────────────────────
+    logger.info("[SHUTDOWN] ATHENA shutting down gracefully.")
+
+
+# ── App factory ─────────────────────────────────────────────────────────────
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -45,9 +66,10 @@ app = FastAPI(
     ),
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,   # modern FastAPI lifecycle — replaces deprecated @app.on_event
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
+# ── CORS ────────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -56,24 +78,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Routers ───────────────────────────────────────────────────────────────────
-app.include_router(
-    analysis_router,
-    prefix="/api/v1/analysis",
-    tags=["Analysis Pipeline"],
-)
-app.include_router(
-    webhook_router,
-    prefix="/api/v1/webhook",
-    tags=["Webhooks"],
-)
-app.include_router(
-    ws_router,
-    prefix="/ws/analysis",
-    tags=["WebSocket"],
-)
+# ── Routers ──────────────────────────────────────────────────────────────────────
+app.include_router(analysis_router, prefix="/api/v1/analysis", tags=["Analysis Pipeline"])
+app.include_router(webhook_router,  prefix="/api/v1/webhook",  tags=["Webhooks"])
+app.include_router(ws_router,       prefix="/ws/analysis",     tags=["WebSocket"])
 
-# ── Static file serving for Markdown reports  (TODO-10 ✓) ─────────────────────
+# ── Static file serving for Markdown reports ───────────────────────────────────────────
 # Mounted AFTER all routers so /api/v1/analysis/* routes keep precedence.
 app.mount(
     "/api/v1/reports",
@@ -81,7 +91,8 @@ app.mount(
     name="reports",
 )
 
-# ── Health check ──────────────────────────────────────────────────────────────
+
+# ── Health check ─────────────────────────────────────────────────────────────────
 @app.get(
     "/api/v1/health",
     response_model=HealthResponse,
@@ -89,17 +100,19 @@ app.mount(
     summary="System health check",
 )
 async def health():
-    """Returns service status and component availability."""
+    """Returns service status, component availability, and runtime config."""
+    from app.services.job_store import _jobs  # lazy import to avoid circular deps
     return HealthResponse(
         status="ok",
         version=settings.APP_VERSION,
         timestamp=datetime.now(timezone.utc),
         components={
             "orchestrator":      "ok",
-            "job_store":         "ok (in-memory)",
-            "scout_agent":       "ready",
+            "job_store":         f"ok (in-memory, {len(_jobs)} active jobs)",
+            "stub_mode":         "ACTIVE — demo data" if settings.is_stub_mode else "off (live agents)",
+            "scout_agent":       "stub" if settings.is_stub_mode else "ready",
             "analyst_service":   "ready",
-            "strategy_agent":    "ready",
+            "strategy_agent":    "stub" if settings.is_stub_mode else "ready",
             "presenter_service": "ready",
             "report_serving":    f"ok — {_reports_dir}",
             "falkordb":          "not connected (TODO-9)",
@@ -111,7 +124,8 @@ async def health():
 @app.get("/", include_in_schema=False)
 async def root():
     return {
-        "service": settings.APP_NAME,
-        "docs":    "/docs",
-        "version": settings.APP_VERSION,
+        "service":   settings.APP_NAME,
+        "version":   settings.APP_VERSION,
+        "stub_mode": settings.is_stub_mode,
+        "docs":      "/docs",
     }
