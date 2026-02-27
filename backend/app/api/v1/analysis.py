@@ -6,6 +6,7 @@ Routers exported (mounted in main.py with correct prefixes):
     POST   /api/v1/analysis/start
     GET    /api/v1/analysis/{job_id}/status
     GET    /api/v1/analysis/{job_id}/results
+    GET    /api/v1/analysis/{job_id}/webhook-events   ← NEW (LATS pass 4)
 
   webhook_router → prefix /api/v1/webhook
     POST   /api/v1/webhook/complete-dev          [TODO-8] ✓
@@ -37,7 +38,13 @@ from app.models.schemas import (
     STAGE_PROGRESS,
     STAGE_LABELS,
 )
-from app.services.job_store import create_job, get_job, run_real_pipeline, record_webhook_event
+from app.services.job_store import (
+    create_job,
+    get_job,
+    get_webhook_events,
+    run_real_pipeline,
+    record_webhook_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +178,31 @@ async def get_results(job_id: str):
         completed_at=job["updated_at"],
         message="Analysis complete. Full intelligence package available.",
     )
+
+
+# ──────────────────────────────────────────────
+# GET /api/v1/analysis/{job_id}/webhook-events
+# ──────────────────────────────────────────────
+
+@router.get(
+    "/{job_id}/webhook-events",
+    summary="List all Complete.dev webhook events recorded for a pipeline job",
+)
+async def get_job_webhook_events(job_id: str):
+    """
+    Returns the ordered list of webhook events received from Complete.dev
+    for the given job.  Useful for debugging agent callback behaviour.
+    """
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+
+    events = get_webhook_events(job_id) or []
+    return {
+        "job_id":       job_id,
+        "event_count":  len(events),
+        "events":       events,
+    }
 
 
 # ──────────────────────────────────────────────
