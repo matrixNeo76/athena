@@ -101,14 +101,16 @@ app.mount(
 )
 async def health():
     """Returns service status, component availability, and runtime config."""
-    from app.services.job_store import _jobs  # lazy import to avoid circular deps
+    # Use the public accessor — avoids importing the private _jobs dict.
+    from app.services.job_store import count_active_jobs  # lazy import: avoids circular deps
+    active_jobs = count_active_jobs()
     return HealthResponse(
         status="ok",
         version=settings.APP_VERSION,
         timestamp=datetime.now(timezone.utc),
         components={
             "orchestrator":      "ok",
-            "job_store":         f"ok (in-memory, {len(_jobs)} active jobs)",
+            "job_store":         f"ok (in-memory, {active_jobs} active jobs)",
             "stub_mode":         "ACTIVE — demo data" if settings.is_stub_mode else "off (live agents)",
             "scout_agent":       "stub" if settings.is_stub_mode else "ready",
             "analyst_service":   "ready",
