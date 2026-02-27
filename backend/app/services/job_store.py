@@ -1,6 +1,6 @@
 """
 ATHENA - In-memory job store + real pipeline runner.
-TODO-6: Unified run_real_pipeline — all stages wired, stubs removed,
+TODO-6 ✓: Unified run_real_pipeline — all stages wired, stubs removed,
         per-stage error handling, results built from real data only.
 
 Pipeline:
@@ -9,11 +9,14 @@ Pipeline:
   STRATEGY  → strategy_agent.run_strategy()     [TODO-4] ✓
   PRESENTER → presenter_service.run_presenter() [TODO-7] ✓
 
-ADDED:
+ADDED (LATS pass 2):
   - 24-hour job TTL with FIFO cap (200 jobs max) to bound memory usage
   - Per-job asyncio.Lock prevents duplicate concurrent pipeline runs
   - Clamped recommended_positioning_index avoids IndexError
   - Null-safe phase.actions access in _build_final_results
+
+ADDED (LATS pass 4):
+  - get_webhook_events() public accessor for the new /webhook-events endpoint
 
 In production the in-memory dict will be replaced by PostgreSQL (TODO-9).
 """
@@ -99,13 +102,13 @@ async def _stage(job_id: str, stage: PipelineStage, stage_name: str):
     On error  : sets job to ERROR with diagnostics, emits ERROR log, re-raises.
     """
     _advance_stage(job_id, stage)
-    logger.info("[PIPELINE] ▶  stage=%-12s  job='%s'  started", stage_name, job_id)
+    logger.info("[PIPELINE] \u25b6  stage=%-12s  job='%s'  started", stage_name, job_id)
     try:
         yield
-        logger.info("[PIPELINE] ✓  stage=%-12s  job='%s'  completed", stage_name, job_id)
+        logger.info("[PIPELINE] \u2713  stage=%-12s  job='%s'  completed", stage_name, job_id)
     except Exception as exc:  # noqa: BLE001
         logger.error(
-            "[PIPELINE] ✗  stage=%-12s  job='%s'  FAILED — %s: %s",
+            "[PIPELINE] \u2717  stage=%-12s  job='%s'  FAILED \u2014 %s: %s",
             stage_name, job_id, type(exc).__name__, exc,
             exc_info=True,
         )
@@ -192,6 +195,7 @@ def create_job(target: str, depth: str = "standard") -> dict:
         "results":          None,
         "error":            None,
         "failed_at_stage":  None,
+        "webhook_events":   [],
     }
     return _jobs[job_id]
 
@@ -201,15 +205,23 @@ def get_job(job_id: str) -> Optional[dict]:
     return _jobs.get(job_id)
 
 
+def get_webhook_events(job_id: str) -> Optional[list[dict]]:
+    """
+    Returns all webhook events recorded for a job, or None if the job
+    does not exist.  Returns an empty list if job exists but has no events.
+    """
+    job = _jobs.get(job_id)
+    if not job:
+        return None
+    return list(job.get("webhook_events", []))
+
+
 def record_webhook_event(job_id: str, event: dict) -> Optional[dict]:
-    """TODO-8: Appends an incoming Complete.dev webhook event to the job's event log."""
+    """Appends an incoming Complete.dev webhook event to the job's event log."""
     job = _jobs.get(job_id)
     if not job:
         logger.warning("[WEBHOOK] received event for unknown job_id='%s'", job_id)
         return None
-
-    if "webhook_events" not in _jobs[job_id]:
-        _jobs[job_id]["webhook_events"] = []
 
     _jobs[job_id]["webhook_events"].append({
         **event,
@@ -256,7 +268,7 @@ async def run_real_pipeline(job_id: str) -> None:
     async with lock:
         target: str = job["target"]
         logger.info(
-            "[PIPELINE] ══════════ START  job='%s'  target='%s' ══════════",
+            "[PIPELINE] \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 START  job='%s'  target='%s' \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
             job_id, target,
         )
 
@@ -266,7 +278,7 @@ async def run_real_pipeline(job_id: str) -> None:
                 scout_result = await run_scout(target=target, focus_questions=None)
                 _jobs[job_id]["scout_result"] = scout_result.model_dump()
                 logger.info(
-                    "[PIPELINE]    → %d competitors  %d trends  %d segments",
+                    "[PIPELINE]    \u2192 %d competitors  %d trends  %d segments",
                     len(scout_result.competitors),
                     len(scout_result.trends),
                     len(scout_result.customer_segments),
@@ -278,7 +290,7 @@ async def run_real_pipeline(job_id: str) -> None:
                 analyst_result = await run_analyst(scout_result=scout_obj)
                 _jobs[job_id]["analyst_result"] = analyst_result.model_dump()
                 logger.info(
-                    "[PIPELINE]    → graph %d nodes  %d edges  %d pain points",
+                    "[PIPELINE]    \u2192 graph %d nodes  %d edges  %d pain points",
                     len(analyst_result.graph_spec.nodes),
                     len(analyst_result.graph_spec.edges),
                     len(analyst_result.key_pain_points),
@@ -290,9 +302,9 @@ async def run_real_pipeline(job_id: str) -> None:
                 strategy_result = await run_strategy(analyst_result=analyst_obj)
                 _jobs[job_id]["strategy_result"] = strategy_result.model_dump()
                 logger.info(
-                    "[PIPELINE]    → %d positioning options  SWOT:%s  GTM phases:%d",
+                    "[PIPELINE]    \u2192 %d positioning options  SWOT:%s  GTM phases:%d",
                     len(strategy_result.positioning_options),
-                    "✓" if strategy_result.swot else "✗",
+                    "\u2713" if strategy_result.swot else "\u2717",
                     len(strategy_result.gtm_plan.launch_phases) if strategy_result.gtm_plan else 0,
                 )
 
@@ -307,7 +319,7 @@ async def run_real_pipeline(job_id: str) -> None:
                 )
                 _jobs[job_id]["presenter_result"] = presenter_result.model_dump()
                 logger.info(
-                    "[PIPELINE]    → %d slides  report %d chars  path=%s",
+                    "[PIPELINE]    \u2192 %d slides  report %d chars  path=%s",
                     len(presenter_result.deck_outline),
                     len(presenter_result.report_markdown),
                     presenter_result.report_path,
@@ -323,7 +335,7 @@ async def run_real_pipeline(job_id: str) -> None:
             _advance_stage(job_id, PipelineStage.DONE)
 
             logger.info(
-                "[PIPELINE] ══════════ DONE  job='%s'  target='%s' ══════════",
+                "[PIPELINE] \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550 DONE  job='%s'  target='%s' \u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550",
                 job_id, target,
             )
 
@@ -334,7 +346,7 @@ async def run_real_pipeline(job_id: str) -> None:
                 _jobs[job_id]["error"]           = f"[{type(exc).__name__}] {exc}"
                 _jobs[job_id]["updated_at"]      = datetime.now(timezone.utc)
             logger.error(
-                "[PIPELINE] ✗  Unhandled error outside stage — job='%s': %s",
+                "[PIPELINE] \u2717  Unhandled error outside stage \u2014 job='%s': %s",
                 job_id, exc,
                 exc_info=True,
             )
