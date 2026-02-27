@@ -13,6 +13,7 @@ import type {
   WsProgressMessage,
   ResultsResponse,
   DeckSlide,
+  SWOTModel,
 } from '../types/athena';
 
 import { startAnalysis, getStatus, getResults, buildWsUrl } from '../lib/api';
@@ -32,10 +33,10 @@ const ORDERED_STAGES: PipelineStage[] = [
 ];
 
 const STAGE_EMOJI: Record<string, string> = {
-  SCOUT:     '🔍',
-  ANALYST:   '📊',
-  STRATEGY:  '♟️',
-  PRESENTER: '📽️',
+  SCOUT:     '\uD83D\uDD0D',
+  ANALYST:   '\uD83D\uDCCA',
+  STRATEGY:  '\u265F\uFE0F',
+  PRESENTER: '\uD83C\uDFBD',
 };
 
 const STAGE_LABEL: Record<string, string> = {
@@ -73,10 +74,10 @@ const Timeline: React.FC<{ currentStage: PipelineStage }> = ({ currentStage }) =
                 'tl-step',
                 isActive    ? 'tl-active' : '',
                 isCompleted ? 'tl-done'   : '',
-              ].join(' ')}
+              ].filter(Boolean).join(' ')}
             >
               <div className="tl-dot">
-                {isCompleted ? '✓' : i + 1}
+                {isCompleted ? '\u2713' : i + 1}
               </div>
               <div className="tl-label">
                 {STAGE_EMOJI[stage]} {STAGE_LABEL[stage]}
@@ -94,6 +95,20 @@ const Timeline: React.FC<{ currentStage: PipelineStage }> = ({ currentStage }) =
   );
 };
 
+/** SWOT quadrant */
+const SWOTQuadrant: React.FC<{
+  label: string;
+  items: string[];
+  kind: 's' | 'w' | 'o' | 't';
+}> = ({ label, items, kind }) => (
+  <div className={`swot-quadrant swot-${kind}`}>
+    <div className="swot-label">{label}</div>
+    <ul className="swot-items">
+      {items.map((item, i) => <li key={i}>{item}</li>)}
+    </ul>
+  </div>
+);
+
 /** Single deck slide card */
 const SlideCard: React.FC<{ slide: DeckSlide }> = ({ slide }) => (
   <div className="slide-card">
@@ -105,13 +120,12 @@ const SlideCard: React.FC<{ slide: DeckSlide }> = ({ slide }) => (
     {slide.bullets && slide.bullets.length > 0 && (
       <ul className="slide-bullets">
         {slide.bullets.map((b, idx) => (
-          // Composite key prevents warning when multiple SlideCards are rendered
           <li key={`s${slide.slide_number}-b${idx}`}>{b}</li>
         ))}
       </ul>
     )}
     {slide.speaker_note && (
-      <div className="speaker-note">💬 {slide.speaker_note}</div>
+      <div className="speaker-note">\uD83D\uDCAC {slide.speaker_note}</div>
     )}
   </div>
 );
@@ -122,25 +136,25 @@ const SlideCard: React.FC<{ slide: DeckSlide }> = ({ slide }) => (
 
 export default function Home() {
   // ---- Form state ----------------------------------------------------------
-  const [target, setTarget]    = useState('');
-  const [type,   setType]      = useState<AnalysisType>('company');
-  const [loading, setLoading]  = useState(false);
+  const [target, setTarget]   = useState('');
+  const [type,   setType]     = useState<AnalysisType>('company');
+  const [loading, setLoading] = useState(false);
 
   // ---- Pipeline state ------------------------------------------------------
-  const [appStatus,     setAppStatus]     = useState<AppStatus>('idle');
-  const [jobId,         setJobId]         = useState<string | null>(null);
-  const [currentStage,  setCurrentStage]  = useState<PipelineStage>('PENDING');
-  const [progress,      setProgress]      = useState(0);
-  const [messages,      setMessages]      = useState<string[]>([]);
-  const [results,       setResults]       = useState<ResultsResponse | null>(null);
-  const [errorMsg,      setErrorMsg]      = useState<string | null>(null);
-  const [copyHint,      setCopyHint]      = useState(false);
+  const [appStatus,    setAppStatus]    = useState<AppStatus>('idle');
+  const [jobId,        setJobId]        = useState<string | null>(null);
+  const [currentStage, setCurrentStage] = useState<PipelineStage>('PENDING');
+  const [progress,     setProgress]     = useState(0);
+  const [messages,     setMessages]     = useState<string[]>([]);
+  const [results,      setResults]      = useState<ResultsResponse | null>(null);
+  const [errorMsg,     setErrorMsg]     = useState<string | null>(null);
+  const [copyHint,     setCopyHint]     = useState(false);
 
   // ---- Refs ----------------------------------------------------------------
-  const wsRef          = useRef<WebSocket | null>(null);
-  const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
-  const logBottomRef   = useRef<HTMLDivElement>(null);
-  const wsOpenedRef    = useRef(false);   // guard: did WS ever open?
+  const wsRef        = useRef<WebSocket | null>(null);
+  const pollRef      = useRef<ReturnType<typeof setInterval> | null>(null);
+  const logBottomRef = useRef<HTMLDivElement>(null);
+  const wsOpenedRef  = useRef(false);
 
   // ---- Auto-scroll log -----------------------------------------------------
   useEffect(() => {
@@ -156,8 +170,6 @@ export default function Home() {
       hour: '2-digit', minute: '2-digit', second: '2-digit',
     });
     const cls = kind === 'error' ? 'log-error' : kind === 'done' ? 'log-done' : '';
-    // Store as "CLASS|||TEXT" so render can apply the right CSS class.
-    // Cap at MAX_LOG_LINES to prevent unbounded memory growth.
     setMessages(prev => {
       const next = [...prev, `${cls}|||[${ts}] ${text}`];
       return next.length > MAX_LOG_LINES ? next.slice(-MAX_LOG_LINES) : next;
@@ -173,7 +185,7 @@ export default function Home() {
     setCurrentStage('DONE');
     setProgress(100);
     setAppStatus('done');
-    addMessage('✅ Pipeline complete — fetching results…', 'done');
+    addMessage('\u2705 Pipeline complete \u2014 fetching results\u2026', 'done');
     try {
       const res = await getResults(jId);
       setResults(res);
@@ -190,19 +202,18 @@ export default function Home() {
     stopPolling();
     setAppStatus('error');
     setErrorMsg(msg);
-    addMessage(`❌ ${msg}`, 'error');
+    addMessage(`\u274C ${msg}`, 'error');
   }, [addMessage, stopPolling]);
 
   // ---- Polling fallback ----------------------------------------------------
   const startPolling = useCallback((jId: string) => {
-    addMessage('WebSocket unavailable — polling every 2 s…');
+    addMessage('WebSocket unavailable \u2014 polling every 2 s\u2026');
     pollRef.current = setInterval(async () => {
       try {
         const s = await getStatus(jId);
         setCurrentStage(s.stage);
         setProgress(s.progress);
         if (s.message) addMessage(s.message);
-
         if (s.stage === 'DONE') {
           stopPolling();
           handleDone(jId);
@@ -210,26 +221,22 @@ export default function Home() {
           handleError(s.error_message ?? 'Pipeline error');
         }
       } catch {
-        // transient network blip — keep polling
+        // transient network blip \u2014 keep polling
       }
     }, 2000);
   }, [addMessage, handleDone, handleError, stopPolling]);
 
   // ---- WebSocket connection ------------------------------------------------
   const connectWebSocket = useCallback((jId: string) => {
-    addMessage('Connecting to pipeline stream…');
+    addMessage('Connecting to pipeline stream\u2026');
     wsOpenedRef.current = false;
 
     const url = buildWsUrl(jId);
     const ws  = new WebSocket(url);
     wsRef.current = ws;
 
-    // Fallback timer: if WS hasn't opened in 5 s, switch to polling
     const fallback = setTimeout(() => {
-      if (!wsOpenedRef.current) {
-        ws.close();
-        startPolling(jId);
-      }
+      if (!wsOpenedRef.current) { ws.close(); startPolling(jId); }
     }, 5000);
 
     ws.onopen = () => {
@@ -244,25 +251,14 @@ export default function Home() {
         setCurrentStage(msg.stage);
         setProgress(msg.progress);
         if (msg.message) addMessage(msg.message);
-
-        if (msg.stage === 'DONE') {
-          ws.close();
-          handleDone(jId);
-        } else if (msg.stage === 'ERROR') {
-          ws.close();
-          handleError(msg.message || 'Pipeline error');
-        }
+        if (msg.stage === 'DONE') { ws.close(); handleDone(jId); }
+        else if (msg.stage === 'ERROR') { ws.close(); handleError(msg.message || 'Pipeline error'); }
       } catch {
-        // Non-JSON frame — display raw
         if (evt.data) addMessage(String(evt.data));
       }
     };
 
-    ws.onerror = () => {
-      clearTimeout(fallback);
-      if (!wsOpenedRef.current) startPolling(jId);
-    };
-
+    ws.onerror = () => { clearTimeout(fallback); if (!wsOpenedRef.current) startPolling(jId); };
     ws.onclose = () => clearTimeout(fallback);
   }, [addMessage, handleDone, handleError, startPolling]);
 
@@ -271,7 +267,6 @@ export default function Home() {
     e.preventDefault();
     if (!target.trim() || loading) return;
 
-    // Reset all pipeline state
     setLoading(true);
     setAppStatus('running');
     setMessages([]);
@@ -282,14 +277,13 @@ export default function Home() {
     setCopyHint(false);
 
     try {
-      addMessage(`Starting ATHENA analysis for "${target.trim()}" (${type})…`);
+      addMessage(`Starting ATHENA analysis for "${target.trim()}" (${type})\u2026`);
       const { job_id } = await startAnalysis({ target: target.trim(), type });
       setJobId(job_id);
       addMessage(`Job created: ${job_id}`);
       connectWebSocket(job_id);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to start analysis';
-      handleError(msg);
+      handleError(err instanceof Error ? err.message : 'Failed to start analysis');
     } finally {
       setLoading(false);
     }
@@ -311,25 +305,18 @@ export default function Home() {
   // ---- Copy report ---------------------------------------------------------
   const handleCopy = useCallback(() => {
     const md = results?.presenter_result?.report_markdown ?? '';
-    // navigator.clipboard is only available in secure contexts (HTTPS / localhost)
     if (!navigator?.clipboard) {
       addMessage('Clipboard not available in this context.', 'error');
       return;
     }
     navigator.clipboard.writeText(md)
-      .then(() => {
-        setCopyHint(true);
-        setTimeout(() => setCopyHint(false), 2000);
-      })
-      .catch(() => addMessage('Clipboard write failed — copy manually.', 'error'));
+      .then(() => { setCopyHint(true); setTimeout(() => setCopyHint(false), 2000); })
+      .catch(() => addMessage('Clipboard write failed \u2014 copy manually.', 'error'));
   }, [results, addMessage]);
 
   // ---- Cleanup on unmount --------------------------------------------------
   useEffect(() => {
-    return () => {
-      wsRef.current?.close();
-      stopPolling();
-    };
+    return () => { wsRef.current?.close(); stopPolling(); };
   }, [stopPolling]);
 
   // ---------------------------------------------------------------------------
@@ -338,18 +325,18 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>ATHENA — Market Intelligence Platform</title>
+        <title>ATHENA \u2014 Market Intelligence Platform</title>
         <meta name="description" content="Autonomous Multi-Agent Market Intelligence &amp; Strategy" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
       <div className="app">
 
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* \u2500\u2500 Header \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
         <header className="header">
           <div className="header-inner">
             <div className="logo">
-              <span className="logo-icon">⚡</span>
+              <span className="logo-icon">\u26A1</span>
               <span className="logo-text">ATHENA</span>
             </div>
             <p className="tagline">Autonomous Multi-Agent Market Intelligence &amp; Strategy</p>
@@ -358,7 +345,7 @@ export default function Home() {
 
         <main className="main">
 
-          {/* ── IDLE: Input form ────────────────────────────────────────── */}
+          {/* \u2500\u2500 IDLE: Input form \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {appStatus === 'idle' && (
             <section className="card form-card">
               <h2 className="section-title">New Analysis</h2>
@@ -371,7 +358,7 @@ export default function Home() {
                     type="text"
                     value={target}
                     onChange={e => setTarget(e.target.value)}
-                    placeholder="e.g. OpenAI, Stripe, DeFi lending protocols…"
+                    placeholder="e.g. OpenAI, Stripe, DeFi lending protocols\u2026"
                     required
                     autoFocus
                   />
@@ -384,9 +371,9 @@ export default function Home() {
                     value={type}
                     onChange={e => setType(e.target.value as AnalysisType)}
                   >
-                    <option value="company">🏢 Company</option>
-                    <option value="product">📦 Product</option>
-                    <option value="market">🌍 Market</option>
+                    <option value="company">\uD83C\uDFE2 Company</option>
+                    <option value="product">\uD83D\uDCE6 Product</option>
+                    <option value="market">\uD83C\uDF0D Market</option>
                   </select>
                 </div>
                 <button
@@ -394,13 +381,13 @@ export default function Home() {
                   className="btn btn-primary"
                   disabled={!target.trim() || loading}
                 >
-                  ⚡ Run ATHENA
+                  {loading ? '\u23F3 Starting\u2026' : '\u26A1 Run ATHENA'}
                 </button>
               </form>
             </section>
           )}
 
-          {/* ── RUNNING / DONE: Pipeline view ───────────────────────────── */}
+          {/* \u2500\u2500 RUNNING / DONE: Pipeline view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {(appStatus === 'running' || appStatus === 'done') && (
             <>
               {/* Status card */}
@@ -408,14 +395,12 @@ export default function Home() {
                 <div className="job-header">
                   <div>
                     <h2 className="section-title">
-                      {appStatus === 'done' ? '✅ Analysis Complete' : '⚡ Running Analysis'}
+                      {appStatus === 'done' ? '\u2705 Analysis Complete' : '\u26A1 Running Analysis'}
                     </h2>
                     <div className="job-meta">
                       <span className="tag">{type}</span>
                       <span className="job-target">{target}</span>
-                      {jobId && (
-                        <span className="job-id">#{jobId.slice(0, 8)}</span>
-                      )}
+                      {jobId && <span className="job-id">#{jobId.slice(0, 8)}</span>}
                     </div>
                   </div>
                   {appStatus === 'done' && (
@@ -425,10 +410,8 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* Timeline */}
                 <Timeline currentStage={currentStage} />
 
-                {/* Progress bar */}
                 <div className="progress-track">
                   <div className="progress-bar" style={{ width: `${progress}%` }} />
                 </div>
@@ -440,14 +423,9 @@ export default function Home() {
                 <p className="section-title-sm">Pipeline Log</p>
                 <div className="log">
                   {messages.map((raw, i) => {
-                    const [cls, text] = raw.includes('|||')
-                      ? raw.split('|||')
-                      : ['', raw];
+                    const [cls, text] = raw.includes('|||') ? raw.split('|||') : ['', raw];
                     return (
-                      <div
-                        key={i}
-                        className={['log-line', cls].filter(Boolean).join(' ')}
-                      >
+                      <div key={i} className={['log-line', cls].filter(Boolean).join(' ')}>
                         {text}
                       </div>
                     );
@@ -456,54 +434,151 @@ export default function Home() {
                 </div>
               </section>
 
-              {/* Results (only when DONE and data available) */}
-              {appStatus === 'done' && results?.presenter_result && (
+              {/* \u2500\u2500 Results (only when DONE and results loaded) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+              {appStatus === 'done' && results && (
                 <>
-                  {/* Markdown report */}
+                  {/* Key Metrics */}
                   <section className="card">
-                    <div className="results-header">
-                      <p className="section-title-sm">📄 Market Intelligence Report</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        {copyHint && <span className="copy-hint">Copied!</span>}
-                        <button className="btn btn-ghost" onClick={handleCopy}>
-                          Copy
-                        </button>
+                    <p className="section-title-sm">\uD83D\uDCCA Intelligence Summary</p>
+                    <div className="metrics-grid">
+                      <div className="metric-item">
+                        <div className="metric-value">{results.competitors?.length ?? '\u2014'}</div>
+                        <div className="metric-label">Competitors</div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-value">{results.key_trends?.length ?? '\u2014'}</div>
+                        <div className="metric-label">Trends</div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-value">
+                          {results.presenter_result?.deck_outline.length ?? '\u2014'}
+                        </div>
+                        <div className="metric-label">Slides</div>
+                      </div>
+                      <div className="metric-item">
+                        <div className="metric-value">
+                          {results.presenter_result?.report_markdown
+                            ? `${Math.round(results.presenter_result.report_markdown.length / 100) / 10}K`
+                            : '\u2014'}
+                        </div>
+                        <div className="metric-label">Report</div>
                       </div>
                     </div>
-                    <textarea
-                      className="report-area"
-                      readOnly
-                      value={results.presenter_result.report_markdown}
-                      spellCheck={false}
-                    />
                   </section>
 
+                  {/* SWOT Analysis */}
+                  {results.swot && (
+                    <section className="card">
+                      <p className="section-title-sm">\u2694\uFE0F SWOT Analysis</p>
+                      <div className="swot-grid">
+                        <SWOTQuadrant label="\uD83D\uDCAA Strengths"     items={results.swot.strengths}     kind="s" />
+                        <SWOTQuadrant label="\uD83D\uDD27 Weaknesses"    items={results.swot.weaknesses}    kind="w" />
+                        <SWOTQuadrant label="\uD83D\uDE80 Opportunities" items={results.swot.opportunities} kind="o" />
+                        <SWOTQuadrant label="\u26A0\uFE0F Threats"       items={results.swot.threats}       kind="t" />
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Competitors & Trends */}
+                  {((results.competitors?.length ?? 0) > 0 || (results.key_trends?.length ?? 0) > 0) && (
+                    <section className="card">
+                      <div className="intel-row">
+                        {results.competitors && results.competitors.length > 0 && (
+                          <div className="intel-col">
+                            <p className="section-title-sm">\uD83C\uDFE2 Identified Competitors</p>
+                            <div className="intel-chips">
+                              {results.competitors.map((c, i) => (
+                                <span key={i} className="chip">{c}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {results.key_trends && results.key_trends.length > 0 && (
+                          <div className="intel-col">
+                            <p className="section-title-sm">\uD83D\uDCC8 Key Market Trends</p>
+                            <ul className="intel-list">
+                              {results.key_trends.map((t, i) => (
+                                <li key={i}>{t}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* GTM Value Proposition */}
+                  {results.gtm?.value_proposition && (
+                    <section className="card gtm-highlight">
+                      <p className="section-title-sm">\uD83C\uDFAF Value Proposition</p>
+                      <blockquote className="gtm-vp">
+                        {results.gtm.value_proposition}
+                      </blockquote>
+                      {results.gtm.positioning && (
+                        <p className="gtm-positioning">
+                          <strong>Recommended Positioning:</strong> {results.gtm.positioning}
+                        </p>
+                      )}
+                    </section>
+                  )}
+
+                  {/* Markdown report */}
+                  {results.presenter_result && (
+                    <section className="card">
+                      <div className="results-header">
+                        <p className="section-title-sm">\uD83D\uDCC4 Market Intelligence Report</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          {copyHint && <span className="copy-hint">Copied!</span>}
+                          <button className="btn btn-ghost" onClick={handleCopy}>Copy</button>
+                          {results.presenter_result.report_url && (
+                            <a
+                              href={results.presenter_result.report_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="btn btn-ghost"
+                            >
+                              Download
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <textarea
+                        className="report-area"
+                        readOnly
+                        value={results.presenter_result.report_markdown}
+                        spellCheck={false}
+                      />
+                    </section>
+                  )}
+
                   {/* Deck outline */}
-                  <section className="card">
-                    <p className="section-title-sm">
-                      🎯 Deck Outline &nbsp;
-                      <span style={{
-                        opacity: 0.5, fontWeight: 400,
-                        textTransform: 'none', letterSpacing: 0,
-                      }}>
-                        ({results.presenter_result.deck_outline.length} slides)
-                      </span>
-                    </p>
-                    <div className="deck-grid">
-                      {results.presenter_result.deck_outline.map((slide: DeckSlide) => (
-                        <SlideCard key={slide.slide_number} slide={slide} />
-                      ))}
-                    </div>
-                  </section>
+                  {results.presenter_result && results.presenter_result.deck_outline.length > 0 && (
+                    <section className="card">
+                      <p className="section-title-sm">
+                        \uD83C\uDFAF Deck Outline &nbsp;
+                        <span style={{
+                          opacity: 0.5, fontWeight: 400,
+                          textTransform: 'none', letterSpacing: 0,
+                        }}>
+                          ({results.presenter_result.deck_outline.length} slides)
+                        </span>
+                      </p>
+                      <div className="deck-grid">
+                        {results.presenter_result.deck_outline.map((slide: DeckSlide) => (
+                          <SlideCard key={slide.slide_number} slide={slide} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
                 </>
               )}
             </>
           )}
 
-          {/* ── ERROR ───────────────────────────────────────────────────── */}
+          {/* \u2500\u2500 ERROR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {appStatus === 'error' && (
             <section className="card error-card">
-              <h2 className="section-title">❌ Analysis Failed</h2>
+              <h2 className="section-title">\u274C Analysis Failed</h2>
               <pre className="error-msg">{errorMsg}</pre>
               <button className="btn btn-secondary" onClick={handleReset}>
                 Try Again
@@ -514,7 +589,7 @@ export default function Home() {
         </main>
 
         <footer className="footer">
-          ATHENA · Built for Complete AI Hackathon · Powered by Deploy.AI
+          ATHENA \u00B7 Built for Complete AI Hackathon \u00B7 Powered by Deploy.AI
         </footer>
       </div>
     </>
