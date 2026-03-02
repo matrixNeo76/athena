@@ -40,44 +40,105 @@ settings = get_settings()
 # Groq — https://console.groq.com/docs/models
 GROQ_MODELS: dict[str, str] = {
     # ── FREE tier ──
-    "llama-3.3-70b-versatile":       "Llama 3.3 70B  — best quality on free tier",
-    "llama-3.1-8b-instant":          "Llama 3.1 8B   — fastest model on Groq",
-    "llama-3.2-11b-vision-preview":  "Llama 3.2 11B  — vision support",
-    "mixtral-8x7b-32768":            "Mixtral 8x7B   — long context (32K)",
-    "gemma2-9b-it":                  "Gemma 2 9B     — Google's compact model",
-    "gemma-7b-it":                   "Gemma 7B       — lightweight, fast",
+    "llama-3.3-70b-versatile":        "Llama 3.3 70B  — best quality on free tier",
+    "llama-3.1-8b-instant":           "Llama 3.1 8B   — fastest model on Groq",
+    "llama-3.2-11b-vision-preview":   "Llama 3.2 11B  — vision support",
+    "mixtral-8x7b-32768":             "Mixtral 8x7B   — long context (32K)",
+    "gemma2-9b-it":                   "Gemma 2 9B     — Google’s compact model",
+    "gemma-7b-it":                    "Gemma 7B       — lightweight, fast",
     # ── Preview / paid ──
-    "llama-3.1-70b-versatile":       "Llama 3.1 70B  — high quality",
-    "llama-3.2-90b-vision-preview":  "Llama 3.2 90B  — largest vision model",
-    "deepseek-r1-distill-llama-70b": "DeepSeek R1 70B — reasoning / chain-of-thought",
-    "qwen-2.5-72b":                  "Qwen 2.5 72B   — multilingual, strong reasoning",
+    "llama-3.1-70b-versatile":        "Llama 3.1 70B  — high quality",
+    "llama-3.2-90b-vision-preview":   "Llama 3.2 90B  — largest vision model",
+    "deepseek-r1-distill-llama-70b":  "DeepSeek R1 70B — reasoning / chain-of-thought",
+    "qwen-2.5-72b":                   "Qwen 2.5 72B   — multilingual, strong reasoning",
 }
 
 # OpenRouter — https://openrouter.ai/models
 OPENROUTER_MODELS: dict[str, str] = {
     # ── FREE models (suffix :free, rate-limited) ──
-    "meta-llama/llama-3.3-70b-instruct:free":  "Llama 3.3 70B  — best free model",
-    "meta-llama/llama-3.1-8b-instruct:free":   "Llama 3.1 8B   — fast & free",
-    "google/gemma-2-9b-it:free":               "Gemma 2 9B     — Google, free",
-    "mistralai/mistral-7b-instruct:free":       "Mistral 7B     — reliable, free",
-    "qwen/qwen-2-7b-instruct:free":            "Qwen 2 7B      — multilingual, free",
-    "microsoft/phi-3-mini-128k-instruct:free": "Phi-3 Mini     — 128K context, free",
-    "nousresearch/hermes-3-llama-3.1-405b:free": "Hermes 3 405B — powerful, free",
-    "deepseek/deepseek-r1:free":               "DeepSeek R1    — reasoning, free",
+    "meta-llama/llama-3.3-70b-instruct:free":    "Llama 3.3 70B  — best free model",
+    "meta-llama/llama-3.1-8b-instruct:free":     "Llama 3.1 8B   — fast & free",
+    "google/gemma-2-9b-it:free":                 "Gemma 2 9B     — Google, free",
+    "mistralai/mistral-7b-instruct:free":        "Mistral 7B     — reliable, free",
+    "qwen/qwen-2-7b-instruct:free":              "Qwen 2 7B      — multilingual, free",
+    "microsoft/phi-3-mini-128k-instruct:free":   "Phi-3 Mini     — 128K context, free",
+    "nousresearch/hermes-3-llama-3.1-405b:free": "Hermes 3 405B  — powerful, free",
+    "deepseek/deepseek-r1:free":                 "DeepSeek R1    — reasoning, free",
     # ── PAID models (best quality) ──
-    "anthropic/claude-3.5-sonnet":             "Claude 3.5 Sonnet  — best overall",
-    "anthropic/claude-3-haiku":                "Claude 3 Haiku     — fast, cheap",
-    "openai/gpt-4o":                           "GPT-4o             — OpenAI flagship",
-    "openai/gpt-4o-mini":                      "GPT-4o Mini        — cheap OpenAI",
-    "google/gemini-pro-1.5":                   "Gemini Pro 1.5     — 1M context",
-    "google/gemini-flash-1.5":                 "Gemini Flash 1.5   — fast, cheap",
-    "meta-llama/llama-3.1-405b-instruct":      "Llama 3.1 405B     — largest open",
-    "deepseek/deepseek-chat":                  "DeepSeek V3        — strong & cheap",
-    "deepseek/deepseek-r1":                    "DeepSeek R1        — best reasoning",
-    "qwen/qwen-2.5-72b-instruct":              "Qwen 2.5 72B       — multilingual",
-    "mistralai/mixtral-8x22b-instruct":        "Mixtral 8x22B      — MoE powerhouse",
-    "cohere/command-r-plus-08-2024":           "Command R+        — RAG-optimised",
+    "anthropic/claude-3.5-sonnet":               "Claude 3.5 Sonnet  — best overall",
+    "anthropic/claude-3-haiku":                  "Claude 3 Haiku     — fast, cheap",
+    "openai/gpt-4o":                             "GPT-4o             — OpenAI flagship",
+    "openai/gpt-4o-mini":                        "GPT-4o Mini        — cheap OpenAI",
+    "google/gemini-pro-1.5":                     "Gemini Pro 1.5     — 1M context",
+    "google/gemini-flash-1.5":                   "Gemini Flash 1.5   — fast, cheap",
+    "meta-llama/llama-3.1-405b-instruct":        "Llama 3.1 405B     — largest open",
+    "deepseek/deepseek-chat":                    "DeepSeek V3        — strong & cheap",
+    "deepseek/deepseek-r1":                      "DeepSeek R1        — best reasoning",
+    "qwen/qwen-2.5-72b-instruct":               "Qwen 2.5 72B       — multilingual",
+    "mistralai/mixtral-8x22b-instruct":          "Mixtral 8x22B      — MoE powerhouse",
+    "cohere/command-r-plus-08-2024":             "Command R+         — RAG-optimised",
 }
+
+
+# ─────────────────────────────────────────────
+# Private shared helpers  (no duplication across adapters)
+# ─────────────────────────────────────────────
+
+def _build_chat_messages(
+    prompt: str,
+    system_prompt: Optional[str] = None,
+) -> list[dict]:
+    """Build an OpenAI-style chat messages list."""
+    messages: list[dict] = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": prompt})
+    return messages
+
+
+def _bearer_headers(api_key: str) -> dict[str, str]:
+    """Standard Authorization + Content-Type headers for Bearer-token APIs."""
+    return {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+
+async def _http_post(url: str, payload: dict, headers: dict, timeout: float) -> dict:
+    """Single-responsibility async POST: raises on non-2xx, returns parsed JSON."""
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        resp = await client.post(url, json=payload, headers=headers)
+        resp.raise_for_status()
+    return resp.json()
+
+
+async def _openai_compat_call(
+    base_url: str,
+    model: str,
+    api_key: str,
+    prompt: str,
+    system_prompt: Optional[str],
+    max_tokens: int,
+    temperature: float,
+    timeout: float,
+    extra_headers: Optional[dict] = None,
+) -> str:
+    """
+    Shared implementation for all OpenAI-compatible endpoints.
+    Groq, OpenRouter and OpenAI all use the same /chat/completions schema.
+    """
+    headers = _bearer_headers(api_key)
+    if extra_headers:
+        headers.update(extra_headers)
+
+    payload = {
+        "model": model,
+        "messages": _build_chat_messages(prompt, system_prompt),
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+    }
+    data = await _http_post(base_url, payload, headers, timeout)
+    return data["choices"][0]["message"]["content"]
 
 
 # ─────────────────────────────────────────────
@@ -89,6 +150,8 @@ class ModelAdapter(ABC):
     Abstract base for all LLM adapters.
     Single async method: ``call(prompt, system_prompt)`` → str.
     """
+    # Subclasses override this to set a provider-appropriate timeout.
+    _TIMEOUT: float = 120.0
 
     @abstractmethod
     async def call(
@@ -109,44 +172,7 @@ class ModelAdapter(ABC):
 
 
 # ─────────────────────────────────────────────
-# Shared OpenAI-compatible request helper
-# ─────────────────────────────────────────────
-
-async def _openai_compatible_call(
-    base_url: str,
-    model: str,
-    prompt: str,
-    system_prompt: Optional[str],
-    max_tokens: int,
-    temperature: float,
-    headers: dict,
-    timeout: float = 120.0,
-) -> str:
-    """
-    Shared implementation for all OpenAI-compatible endpoints.
-    Groq, OpenRouter and OpenAI all use the same /chat/completions schema.
-    """
-    messages: list[dict] = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({"role": "user", "content": prompt})
-
-    payload = {
-        "model": model,
-        "messages": messages,
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-    }
-
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        resp = await client.post(base_url, json=payload, headers=headers)
-        resp.raise_for_status()
-
-    return resp.json()["choices"][0]["message"]["content"]
-
-
-# ─────────────────────────────────────────────
-# Deploy.AI adapter (default)
+# Concrete adapters
 # ─────────────────────────────────────────────
 
 class DeployAIAdapter(ModelAdapter):
@@ -175,17 +201,13 @@ class DeployAIAdapter(ModelAdapter):
         return await call_agent(agent_id=agent_id, prompt=prompt)
 
 
-# ─────────────────────────────────────────────
-# OpenAI adapter
-# ─────────────────────────────────────────────
-
 class OpenAIAdapter(ModelAdapter):
     """
     Direct OpenAI API (gpt-4o / gpt-4-turbo / gpt-4o-mini).
     Env: OPENAI_API_KEY, OPENAI_MODEL
     """
-
-    _URL = "https://api.openai.com/v1/chat/completions"
+    _URL     = "https://api.openai.com/v1/chat/completions"
+    _TIMEOUT = 120.0
 
     @property
     def provider_name(self) -> str:
@@ -198,32 +220,27 @@ class OpenAIAdapter(ModelAdapter):
         max_tokens: int = 4096,
         temperature: float = 0.7,
     ) -> str:
-        return await _openai_compatible_call(
+        return await _openai_compat_call(
             base_url=self._URL,
             model=settings.OPENAI_MODEL,
+            api_key=settings.OPENAI_API_KEY,
             prompt=prompt,
             system_prompt=system_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
-            headers={
-                "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
-                "Content-Type": "application/json",
-            },
+            timeout=self._TIMEOUT,
         )
 
-
-# ─────────────────────────────────────────────
-# Anthropic Claude adapter
-# ─────────────────────────────────────────────
 
 class AnthropicAdapter(ModelAdapter):
     """
     Direct Anthropic Messages API.
     Env: ANTHROPIC_API_KEY, ANTHROPIC_MODEL
     Best models: claude-3-5-sonnet-20241022 (quality) | claude-3-haiku-20240307 (speed)
+    Note: different request/response schema from OpenAI — uses _http_post directly.
     """
-
-    _URL = "https://api.anthropic.com/v1/messages"
+    _URL     = "https://api.anthropic.com/v1/messages"
+    _TIMEOUT = 120.0
 
     @property
     def provider_name(self) -> str:
@@ -237,49 +254,35 @@ class AnthropicAdapter(ModelAdapter):
         temperature: float = 0.7,
     ) -> str:
         payload: dict = {
-            "model": settings.ANTHROPIC_MODEL,
+            "model":      settings.ANTHROPIC_MODEL,
             "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages":  [{"role": "user", "content": prompt}],
         }
         if system_prompt:
             payload["system"] = system_prompt
 
         headers = {
-            "x-api-key": settings.ANTHROPIC_API_KEY,
+            "x-api-key":         settings.ANTHROPIC_API_KEY,
             "anthropic-version": "2023-06-01",
-            "Content-Type": "application/json",
+            "Content-Type":      "application/json",
         }
+        data = await _http_post(self._URL, payload, headers, self._TIMEOUT)
+        return data["content"][0]["text"]
 
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(self._URL, json=payload, headers=headers)
-            resp.raise_for_status()
-
-        return resp.json()["content"][0]["text"]
-
-
-# ─────────────────────────────────────────────
-# Groq adapter  —  ultra-fast LPU inference
-# https://console.groq.com/docs/openai
-# ─────────────────────────────────────────────
 
 class GroqAdapter(ModelAdapter):
     """
     Groq LPU inference — fastest available API, generous free tier.
+    Env: GROQ_API_KEY, GROQ_MODEL  (see GROQ_MODELS catalogue)
 
-    Env vars:
-        GROQ_API_KEY   — from https://console.groq.com/keys
-        GROQ_MODEL     — see GROQ_MODELS catalogue above
-
-    Recommended free-tier models for ATHENA:
-        llama-3.3-70b-versatile   — best quality, ~300 tok/s
-        llama-3.1-8b-instant      — fastest,     ~750 tok/s
-        mixtral-8x7b-32768        — long context (32K tokens)
-        deepseek-r1-distill-llama-70b — chain-of-thought reasoning
-
-    API is 100% OpenAI-compatible.
+    Free-tier recommendations:
+        llama-3.3-70b-versatile          best quality  (~300 tok/s)
+        llama-3.1-8b-instant             fastest       (~750 tok/s)
+        mixtral-8x7b-32768               long context  (32K tokens)
+        deepseek-r1-distill-llama-70b    chain-of-thought reasoning
     """
-
-    _URL = "https://api.groq.com/openai/v1/chat/completions"
+    _URL     = "https://api.groq.com/openai/v1/chat/completions"
+    _TIMEOUT = 60.0   # Groq is fast; shorter timeout is appropriate
 
     @property
     def provider_name(self) -> str:
@@ -292,53 +295,37 @@ class GroqAdapter(ModelAdapter):
         max_tokens: int = 4096,
         temperature: float = 0.7,
     ) -> str:
-        return await _openai_compatible_call(
+        return await _openai_compat_call(
             base_url=self._URL,
             model=settings.GROQ_MODEL,
+            api_key=settings.GROQ_API_KEY,
             prompt=prompt,
             system_prompt=system_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
-            headers={
-                "Authorization": f"Bearer {settings.GROQ_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            timeout=60.0,   # Groq is fast, shorter timeout is fine
+            timeout=self._TIMEOUT,
         )
 
-
-# ─────────────────────────────────────────────
-# OpenRouter adapter  —  300+ models, free tier available
-# https://openrouter.ai/docs
-# ─────────────────────────────────────────────
 
 class OpenRouterAdapter(ModelAdapter):
     """
     OpenRouter — unified gateway for 300+ models from all major providers.
+    Env: OPENROUTER_API_KEY, OPENROUTER_MODEL  (see OPENROUTER_MODELS catalogue)
 
-    Env vars:
-        OPENROUTER_API_KEY    — from https://openrouter.ai/keys
-        OPENROUTER_MODEL      — see OPENROUTER_MODELS catalogue above
-        OPENROUTER_SITE_URL   — optional, shown on openrouter.ai dashboard
-        OPENROUTER_SITE_NAME  — optional, shown on openrouter.ai dashboard
-
-    Free models (no cost, rate-limited):
-        meta-llama/llama-3.3-70b-instruct:free  — best free model
-        deepseek/deepseek-r1:free               — best free reasoning
+    Free models (rate-limited, append :free):
+        meta-llama/llama-3.3-70b-instruct:free  best free model
+        deepseek/deepseek-r1:free               best free reasoning
         google/gemma-2-9b-it:free
         mistralai/mistral-7b-instruct:free
-        qwen/qwen-2-7b-instruct:free
 
     Paid models (top quality):
         anthropic/claude-3.5-sonnet
         openai/gpt-4o
-        deepseek/deepseek-chat          — excellent price/quality ratio
-        google/gemini-flash-1.5         — fast, cheap, long context
-
-    API is OpenAI-compatible with two extra optional headers.
+        deepseek/deepseek-chat   (excellent price/quality)
+        google/gemini-flash-1.5  (fast, cheap, long context)
     """
-
-    _URL = "https://openrouter.ai/api/v1/chat/completions"
+    _URL     = "https://openrouter.ai/api/v1/chat/completions"
+    _TIMEOUT = 120.0
 
     @property
     def provider_name(self) -> str:
@@ -351,52 +338,37 @@ class OpenRouterAdapter(ModelAdapter):
         max_tokens: int = 4096,
         temperature: float = 0.7,
     ) -> str:
-        headers: dict[str, str] = {
-            "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        # Optional headers improve ranking visibility on openrouter.ai
+        # OpenRouter accepts two optional headers for dashboard visibility
+        extra: dict[str, str] = {}
         if settings.OPENROUTER_SITE_URL:
-            headers["HTTP-Referer"] = settings.OPENROUTER_SITE_URL
+            extra["HTTP-Referer"] = settings.OPENROUTER_SITE_URL
         if settings.OPENROUTER_SITE_NAME:
-            headers["X-Title"] = settings.OPENROUTER_SITE_NAME
+            extra["X-Title"] = settings.OPENROUTER_SITE_NAME
 
-        return await _openai_compatible_call(
+        return await _openai_compat_call(
             base_url=self._URL,
             model=settings.OPENROUTER_MODEL,
+            api_key=settings.OPENROUTER_API_KEY,
             prompt=prompt,
             system_prompt=system_prompt,
             max_tokens=max_tokens,
             temperature=temperature,
-            headers=headers,
-            timeout=120.0,
+            timeout=self._TIMEOUT,
+            extra_headers=extra or None,
         )
 
-
-# ─────────────────────────────────────────────
-# Ollama adapter  —  local, free, private
-# ─────────────────────────────────────────────
 
 class OllamaAdapter(ModelAdapter):
     """
     Ollama — run open-source models locally. Zero cost, fully private.
+    Env: OLLAMA_BASE_URL, OLLAMA_MODEL
 
-    Install: https://ollama.ai
-    Pull:    ollama pull llama3.2
-
-    Env vars:
-        OLLAMA_BASE_URL  — default http://localhost:11434
-        OLLAMA_MODEL     — any model pulled via `ollama pull`
-
-    Popular models:
-        llama3.2        — Meta Llama 3.2 3B (fast on CPU)
-        llama3.1:8b     — Meta Llama 3.1 8B
-        mistral         — Mistral 7B
-        qwen2.5:7b      — Alibaba Qwen 2.5 7B
-        deepseek-r1:7b  — DeepSeek R1 reasoning
-        gemma2:9b       — Google Gemma 2 9B
-        phi3            — Microsoft Phi-3 (tiny, fast)
+    Install: https://ollama.ai  |  Pull: ollama pull llama3.2
+    Popular models: llama3.2 | llama3.1:8b | mistral | qwen2.5:7b |
+                    deepseek-r1:7b | gemma2:9b | phi3
+    Note: different response schema from OpenAI — uses _http_post directly.
     """
+    _TIMEOUT = 300.0  # Local inference can be slow on CPU
 
     @property
     def provider_name(self) -> str:
@@ -409,24 +381,15 @@ class OllamaAdapter(ModelAdapter):
         max_tokens: int = 4096,
         temperature: float = 0.7,
     ) -> str:
-        messages: list[dict] = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-
         payload = {
-            "model": settings.OLLAMA_MODEL,
-            "messages": messages,
-            "stream": False,
-            "options": {"temperature": temperature, "num_predict": max_tokens},
+            "model":    settings.OLLAMA_MODEL,
+            "messages": _build_chat_messages(prompt, system_prompt),
+            "stream":   False,
+            "options":  {"temperature": temperature, "num_predict": max_tokens},
         }
-
-        url = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat"
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            resp = await client.post(url, json=payload)
-            resp.raise_for_status()
-
-        return resp.json()["message"]["content"]
+        url  = f"{settings.OLLAMA_BASE_URL.rstrip('/')}/api/chat"
+        data = await _http_post(url, payload, {}, self._TIMEOUT)
+        return data["message"]["content"]
 
 
 # ─────────────────────────────────────────────
@@ -434,12 +397,12 @@ class OllamaAdapter(ModelAdapter):
 # ─────────────────────────────────────────────
 
 _ADAPTER_MAP: dict[str, type[ModelAdapter]] = {
-    "deploy_ai":   DeployAIAdapter,
-    "openai":      OpenAIAdapter,
-    "anthropic":   AnthropicAdapter,
-    "groq":        GroqAdapter,
-    "openrouter":  OpenRouterAdapter,
-    "ollama":      OllamaAdapter,
+    "deploy_ai":  DeployAIAdapter,
+    "openai":     OpenAIAdapter,
+    "anthropic":  AnthropicAdapter,
+    "groq":       GroqAdapter,
+    "openrouter": OpenRouterAdapter,
+    "ollama":     OllamaAdapter,
 }
 
 
@@ -447,24 +410,22 @@ def get_model_adapter(provider: Optional[str] = None) -> ModelAdapter:
     """
     Return the configured ModelAdapter instance.
 
-    provider='auto' triggers auto-selection:
-        groq        if GROQ_API_KEY set        (fastest)
-        openrouter  if OPENROUTER_API_KEY set  (most models)
-        openai      if OPENAI_API_KEY set
-        anthropic   if ANTHROPIC_API_KEY set
-        deploy_ai   if DEPLOY_AI_CLIENT_ID set
-        ollama      always available locally
+    provider='auto' triggers priority-based selection:
+        groq        — fastest (if GROQ_API_KEY set)
+        openrouter  — most models (if OPENROUTER_API_KEY set)
+        openai      — if OPENAI_API_KEY set
+        anthropic   — if ANTHROPIC_API_KEY set
+        deploy_ai   — if DEPLOY_AI_CLIENT_ID set
+        ollama      — always available locally
     """
     selected = (provider or settings.LLM_PROVIDER).lower().strip()
-
     if selected == "auto":
         selected = _auto_select_provider()
 
     adapter_cls = _ADAPTER_MAP.get(selected)
     if adapter_cls is None:
         raise ValueError(
-            f"Unknown LLM_PROVIDER '{selected}'. "
-            f"Valid: {list(_ADAPTER_MAP)}"
+            f"Unknown LLM_PROVIDER '{selected}'. Valid: {list(_ADAPTER_MAP)}"
         )
 
     logger.info("[ModelAdapter] provider=%s", selected)
@@ -473,10 +434,10 @@ def get_model_adapter(provider: Optional[str] = None) -> ModelAdapter:
 
 def list_models(provider: Optional[str] = None) -> dict[str, str]:
     """
-    Return the model catalogue for a provider.
+    Return the model catalogue for a given provider, or all catalogues merged.
 
     Args:
-        provider: 'groq' | 'openrouter' | None (returns all)
+        provider: 'groq' | 'openrouter' | None (returns combined)
     """
     catalogues: dict[str, dict[str, str]] = {
         "groq":       GROQ_MODELS,
@@ -484,22 +445,23 @@ def list_models(provider: Optional[str] = None) -> dict[str, str]:
     }
     if provider:
         return catalogues.get(provider.lower(), {})
-    combined: dict[str, str] = {}
-    for p, models in catalogues.items():
-        combined.update({f"{p}/{k}": v for k, v in models.items()})
-    return combined
+    return {
+        f"{p}/{model}": desc
+        for p, models in catalogues.items()
+        for model, desc in models.items()
+    }
 
 
 def _auto_select_provider() -> str:
     """Priority: groq > openrouter > openai > anthropic > deploy_ai > ollama."""
-    if settings.has_groq:
-        return "groq"
-    if settings.has_openrouter:
-        return "openrouter"
-    if settings.has_openai:
-        return "openai"
-    if settings.has_anthropic:
-        return "anthropic"
-    if settings.DEPLOY_AI_CLIENT_ID.strip():
-        return "deploy_ai"
-    return "ollama"
+    checks = [
+        (settings.has_groq,                          "groq"),
+        (settings.has_openrouter,                    "openrouter"),
+        (settings.has_openai,                        "openai"),
+        (settings.has_anthropic,                     "anthropic"),
+        (bool(settings.DEPLOY_AI_CLIENT_ID.strip()), "deploy_ai"),
+    ]
+    for condition, name in checks:
+        if condition:
+            return name
+    return "ollama"  # always available locally
