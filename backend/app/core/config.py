@@ -5,21 +5,25 @@ pydantic-settings v2 syntax.
 
 STUB_MODE:    when True, agents return deterministic demo data
               without real API calls. Auto-enabled when
-              DEPLOY_AI_CLIENT_ID is empty.
+              DEPLOY_AI_CLIENT_ID is empty and no other LLM provider
+              is configured.
 
-LATS_ENABLED: enables Language Agent Tree Search for Scout and
-              Strategy stages. Set to False for faster (linear)
-              runs during development.
+LATS_ENABLED: enables Language Agent Tree Search for Scout/Strategy.
+              Automatically disabled in stub mode.
 
-LLM_PROVIDER: selects the LLM backend used by agents.
-              deploy_ai  — Deploy.AI platform (default, hackathon)
-              openai     — OpenAI direct API
-              anthropic  — Anthropic Claude direct API
-              ollama     — Local models via Ollama (free)
+LLM_PROVIDER: selects the LLM backend.
+  deploy_ai   – Deploy.AI platform     (default, hackathon)
+  openai      – OpenAI direct API
+  anthropic   – Anthropic Claude direct API
+  groq        – Groq LPU inference     (ultra-fast, free tier)
+  openrouter  – OpenRouter gateway     (300+ models, free tier)
+  ollama      – Local open-source      (free, private)
+  auto        – pick best available
 """
+from functools import lru_cache
+
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from functools import lru_cache
 
 
 class Settings(BaseSettings):
@@ -33,63 +37,83 @@ class Settings(BaseSettings):
         "*",
     ]
 
-    # ── Deploy.AI / Complete.dev credentials ────────────────────
+    # ── Deploy.AI / Complete.dev ─────────────────────────────
     DEPLOY_AI_AUTH_URL: str = "https://api-auth.dev.deploy.ai/oauth2/token"
     DEPLOY_AI_API_URL:  str = "https://core-api.dev.deploy.ai"
     DEPLOY_AI_CLIENT_ID:     str       = ""
     DEPLOY_AI_CLIENT_SECRET: SecretStr = SecretStr("")
     DEPLOY_AI_ORG_ID:        str       = ""
+    SCOUT_AGENT_ID:          str       = "SCOUT_AGENT_ID_PLACEHOLDER"
+    STRATEGY_AGENT_ID:       str       = "STRATEGY_AGENT_ID_PLACEHOLDER"
 
-    # ── Agent IDs (from Deploy.AI Agent Builder) ────────────────
-    SCOUT_AGENT_ID:    str = "SCOUT_AGENT_ID_PLACEHOLDER"
-    STRATEGY_AGENT_ID: str = "STRATEGY_AGENT_ID_PLACEHOLDER"
+    # ── LLM provider selection ─────────────────────────────
+    # Change with one env-var — no code edits needed.
+    LLM_PROVIDER: str = "deploy_ai"  # deploy_ai|openai|anthropic|groq|openrouter|ollama|auto
 
-    # ── Alternative LLM providers ───────────────────────────
-    # Switch via LLM_PROVIDER env var (no code changes required).
-    #
-    # | Provider    | Env vars required                      |
-    # |-------------|----------------------------------------|
-    # | deploy_ai   | DEPLOY_AI_CLIENT_ID/SECRET/ORG_ID      |
-    # | openai      | OPENAI_API_KEY                         |
-    # | anthropic   | ANTHROPIC_API_KEY                      |
-    # | ollama      | OLLAMA_BASE_URL, OLLAMA_MODEL (opt)    |
-    LLM_PROVIDER:    str = "deploy_ai"   # deploy_ai | openai | anthropic | ollama
+    # ── OpenAI ────────────────────────────────────────
+    OPENAI_API_KEY: str = ""
+    OPENAI_MODEL:   str = "gpt-4o"  # gpt-4o | gpt-4o-mini | gpt-4-turbo
 
-    # OpenAI direct
-    OPENAI_API_KEY:  str = ""
-    OPENAI_MODEL:    str = "gpt-4o"
-
-    # Anthropic Claude direct
+    # ── Anthropic Claude ───────────────────────────────
     ANTHROPIC_API_KEY: str = ""
-    ANTHROPIC_MODEL:   str = "claude-3-5-sonnet-20241022"
+    ANTHROPIC_MODEL:   str = "claude-3-5-sonnet-20241022"  # or claude-3-haiku-20240307
 
-    # Ollama local (open-source, free, runs on GPU/CPU)
+    # ── Groq  (ultra-fast LPU, generous free tier) ──────────
+    # Get key: https://console.groq.com/keys
+    # Free models: llama-3.3-70b-versatile | llama-3.1-8b-instant |
+    #              mixtral-8x7b-32768 | gemma2-9b-it |
+    #              deepseek-r1-distill-llama-70b
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL:   str = "llama-3.3-70b-versatile"
+
+    # ── OpenRouter  (300+ models, free tier available) ────────
+    # Get key: https://openrouter.ai/keys
+    # Free models (append :free): meta-llama/llama-3.3-70b-instruct:free
+    #   google/gemma-2-9b-it:free | mistralai/mistral-7b-instruct:free
+    #   deepseek/deepseek-r1:free | qwen/qwen-2-7b-instruct:free
+    # Paid models: anthropic/claude-3.5-sonnet | openai/gpt-4o
+    #   deepseek/deepseek-chat | google/gemini-flash-1.5
+    OPENROUTER_API_KEY:   str = ""
+    OPENROUTER_MODEL:     str = "meta-llama/llama-3.3-70b-instruct:free"
+    OPENROUTER_SITE_URL:  str = ""      # optional — shown on openrouter.ai dashboard
+    OPENROUTER_SITE_NAME: str = "ATHENA"
+
+    # ── Ollama  (local, free, private) ─────────────────────
+    # Install: https://ollama.ai | Pull: ollama pull llama3.2
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL:    str = "llama3.2"  # or qwen2.5, mistral, deepseek-r1
+    OLLAMA_MODEL:    str = "llama3.2"  # llama3.1:8b | mistral | qwen2.5:7b | deepseek-r1:7b
 
-    # ── LATS (Language Agent Tree Search) settings ──────────────
-    # Disabled automatically in stub mode (no API calls to multiply).
-    LATS_ENABLED:            bool  = True
-    LATS_N_CANDIDATES:       int   = 2     # parallel candidates per stage
-    LATS_QUALITY_THRESHOLD:  float = 0.65  # score above which early-exit fires
-    LATS_MAX_DEPTH:          int   = 2     # max reflection iterations
+    # ── LATS settings ──────────────────────────────────
+    LATS_ENABLED:           bool  = True
+    LATS_N_CANDIDATES:      int   = 2     # parallel candidates per stage
+    LATS_QUALITY_THRESHOLD: float = 0.65  # score ≥ this → early exit
+    LATS_MAX_DEPTH:         int   = 2     # max reflection iterations
 
-    # ── Reports output directory ────────────────────────────
-    REPORTS_DIR: str = "./reports"
+    # ── Misc ──────────────────────────────────────────
+    REPORTS_DIR: str  = "./reports"
+    STUB_MODE:   bool = False
 
-    # ── Stub / demo mode ────────────────────────────────
-    STUB_MODE: bool = False
-
-    # ── Derived properties ───────────────────────────────
+    # ── Derived properties ────────────────────────────────
 
     @property
     def is_stub_mode(self) -> bool:
-        """True when STUB_MODE=True OR no Deploy.AI client ID is configured."""
-        return self.STUB_MODE or not self.DEPLOY_AI_CLIENT_ID.strip()
+        """True when STUB_MODE=True OR no LLM provider is configured."""
+        if self.STUB_MODE:
+            return True
+        # At least one real provider must be configured
+        return not any([
+            self.DEPLOY_AI_CLIENT_ID.strip(),
+            self.has_groq,
+            self.has_openrouter,
+            self.has_openai,
+            self.has_anthropic,
+            # Ollama is always "available" locally — don't force stub if OLLAMA provider
+            self.LLM_PROVIDER == "ollama",
+        ])
 
     @property
     def effective_lats_enabled(self) -> bool:
-        """LATS is disabled automatically in stub mode (nothing to score)."""
+        """LATS disabled automatically in stub mode."""
         return self.LATS_ENABLED and not self.is_stub_mode
 
     @property
@@ -99,6 +123,14 @@ class Settings(BaseSettings):
     @property
     def has_anthropic(self) -> bool:
         return bool(self.ANTHROPIC_API_KEY.strip())
+
+    @property
+    def has_groq(self) -> bool:
+        return bool(self.GROQ_API_KEY.strip())
+
+    @property
+    def has_openrouter(self) -> bool:
+        return bool(self.OPENROUTER_API_KEY.strip())
 
     # pydantic-settings v2
     model_config = SettingsConfigDict(
@@ -113,5 +145,5 @@ def get_settings() -> Settings:
     return Settings()
 
 
-# Module-level singleton (backward-compat import: `from app.core.config import settings`)
+# Backward-compat: `from app.core.config import settings`
 settings = get_settings()
